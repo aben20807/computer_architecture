@@ -17,16 +17,22 @@ int main(int argc, char *argv[])
     FILE *fout = fopen(argv[2], "w");
 
     char line[20];
+    char bin[32];
     while (!feof(fin)) {
         if (fgets(line, 20, fin) != NULL) {
-            for (int i = 0; i < 11; i++) {
-                int ii = c2i(line[i]);
-                if (ii != -1) {
-                    printf("%d", ii);
-                    printf("(%s)", table[ii]);
-                }
-            }
-            printf("\n");
+            sprintf(bin, "%s%s%s%s%s%s%s%s",
+                    table[c2i(line[0])],
+                    table[c2i(line[1])],
+                    table[c2i(line[3])],
+                    table[c2i(line[4])],
+                    table[c2i(line[6])],
+                    table[c2i(line[7])],
+                    table[c2i(line[9])],
+                    table[c2i(line[10])]);
+            printf("%s\n", bin);
+        }
+        if (strcmp(bin, "00000000000000000000000000000000") == 0) {
+            printf("nop");
         }
     }
 
