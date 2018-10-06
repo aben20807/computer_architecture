@@ -19,8 +19,18 @@ int main(int argc, char *argv[])
 
     char line[20];
     char bin[32];
+    inst_t inst = 0;
     while (!feof(fin)) {
         if (fgets(line, 20, fin) != NULL) {
+            inst = ((h2d(line[0]) << 28) +
+                    (h2d(line[1]) << 24) +
+                    (h2d(line[3]) << 20) +
+                    (h2d(line[4]) << 16) +
+                    (h2d(line[6]) << 12) +
+                    (h2d(line[7]) << 8 ) +
+                    (h2d(line[9]) << 4 ) +
+                    (h2d(line[10])));
+            printf("%d\n", inst);
             sprintf(bin, "%s%s%s%s%s%s%s%s",
                     table[h2d(line[0])],
                     table[h2d(line[1])],

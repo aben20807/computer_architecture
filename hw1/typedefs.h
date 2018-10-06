@@ -1,6 +1,8 @@
 #ifndef _TYPEDEFS_H_
 #define _TYPEDEFS_H_
 
+typedef unsigned int inst_t;
+
 typedef enum _OP {
     OP_R        = 0,
     OP_BLTZ     = 1,
