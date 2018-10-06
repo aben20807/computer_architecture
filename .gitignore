@@ -1,3 +1,5 @@
 *.swp
 *.exe
 out
+.gdb_history
+*.stackdump
