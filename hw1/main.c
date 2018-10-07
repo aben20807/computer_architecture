@@ -128,14 +128,14 @@ int main(int argc, char *argv[])
 
         case OP_LB:
         case OP_LH:
-        case OP_LWI:
+        case OP_LWL:
         case OP_LW:
         case OP_LBU:
         case OP_LHU:
         case OP_LWR:
         case OP_SB:
         case OP_SH:
-        case OP_SWI:
+        case OP_SWL:
         case OP_SW:
         case OP_SWR:
             rs = get_rs(inst);

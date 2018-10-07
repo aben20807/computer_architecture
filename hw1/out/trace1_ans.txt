@@ -1,0 +1,20 @@
+j 18
+nop
+addi $t4, $zero, 2
+slt $t4, $a0, $t4
+beq $t4, $zero, 2
+add $v0, $a0, $zero
+jr $ra
+addi $t0, $zero, 1
+addi $t1, $zero, 0
+addi $t3, $zero, 1
+add $t2, $t0, $t1
+add $t1, $t0, $zero
+add $t0, $t2, $zero
+addi $t3, $t3, 1
+bne $t3, $a0, 65531
+add $v0, $t0, $zero
+jr $ra
+nop
+addi $a0, $zero, 25
+jal 2
