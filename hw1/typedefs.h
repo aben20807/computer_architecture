@@ -1,13 +1,45 @@
 #ifndef _TYPEDEFS_H_
 #define _TYPEDEFS_H_
 
+#define $V "$v0", "$v1"
+#define $A "$a0", "$a1", "$a2", "$a3"
+#define $T "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7"
+#define $S "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7"
+#define $Y "$t8", "$t9"
+#define $K "$k0", "$k1"
+#define REG "$zero", "$at", $V, $A, $T, $S, $Y, $K, "$gp", "$sp", "$fp", "$ra"
+const char *reg_table[32] = { REG };
+
+/*           000     001      010     011      100     101    110      111 */
+#define o000 "r"   , "bltz" , "j"   , "jal"  , "beq" , "bne", "blez", "bgtz"
+#define o001 "addi", "addiu", "slti", "sltiu", "andi", "ori", "xori", "lui"
+#define o010 "tlb" , "fipt" , ""    , ""     , ""    , ""   , ""    , ""
+#define o011 ""    , ""     , ""    , ""     , ""    , ""   , ""    , ""
+#define o100 "lb"  , "lh"   , "lwi" , "lw"   , "lbu" , "lhu", "lwr" , ""
+#define o101 "sb"  , "sh"   , "swi" , "sw"   , ""    , ""   , "swr" , ""
+#define o110 "ll"  , "lwc1" , ""    , ""     , ""    , ""   , ""    , ""
+#define o111 "sc"  , "swc1" , ""    , ""     , ""    , ""   , ""    , ""
+const char *op_table[64] = { o000, o001, o010, o011, o100, o101, o110, o111 };
+
+/*           000     001      010     011      100        101      110     111 */
+#define f000 "sll" , ""     , "srl" , "sra"  , "sllv"   , ""     , "blez", "bgtz"
+#define f001 "jr"  , "jalr" , ""    , ""     , "syscall", "break", ""    , ""
+#define f010 "mfhi", "mthi" , "mflo", "mtlo" , ""       , ""     , ""    , ""
+#define f011 "mult", "multu", "div" , "divu" , ""       , ""     , ""    , ""
+#define f100 "add" , "addu" , "sub" , "subu" , "and"    , "or"   , "xor" , "nor"
+#define f101 ""    , ""     , "slt" , "sltu" , ""       , ""     , "swr" , ""
+#define f110 ""    , ""     , ""    , ""     , ""       , ""     , ""    , ""
+#define f111 ""    , ""     , ""    , ""     , ""       , ""     , ""    , ""
+const char *funct_table[64] = { f000, f001, f010, f011, f100, f101, f110, f111 };
+
+
 typedef unsigned int inst_t;
 
 typedef enum _OP {
     OP_R        = 0,
     OP_BLTZ     = 1,
     OP_J        = 2,
-    OP_Jal      = 3,
+    OP_JAL      = 3,
     OP_BEQ      = 4,
     OP_BNE      = 5,
     OP_BLEZ     = 6,
