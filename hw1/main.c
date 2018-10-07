@@ -15,19 +15,9 @@ funct_t get_funct(inst_t inst);
 
 int main(int argc, char *argv[])
 {
-        // for (int i = 0; i < 32; i++){
-        //     printf("%s\n", reg_table[i]);
-        // }
-        // for (int i = 0; i < 64; i++){
-        //     if (strlen(op_table[i]) == 0) continue;
-        //     printf("%s\n", op_table[i]);
-        // }
-        // for (int i = 0; i < 64; i++){
-        //     if (strlen(funct_table[i]) == 0) continue;
-        //     printf("%s\n", funct_table[i]);
-        // }
     if (argc < 2)
         exit(0);
+
     FILE *fin = fopen(argv[1], "r");
     FILE *fout = fopen(argv[2], "w");
 
@@ -43,28 +33,85 @@ int main(int argc, char *argv[])
                     (h2d(line[7]) << 8 ) +
                     (h2d(line[9]) << 4 ) +
                     (h2d(line[10])));
-            printf("%d\n", inst);
         }
-        // printf("%s\n", reg_table[get_rs(inst)]);
         int op = get_op(inst);
-        int funct;
+        int funct, rd, rs, rt;
         switch (op) {
-            case OP_R:
-                funct = get_funct(inst);
-                printf("R: %d\n", funct);
-                printf("%s %s %s %s\n",
-                        funct_table[get_funct(inst)],
-                        reg_table[get_rd(inst)],
-                        reg_table[get_rs(inst)],
-                        reg_table[get_rt(inst)]);
+        case OP_R:
+            funct = get_funct(inst);
+            rd = get_rd(inst);
+            rs = get_rs(inst);
+            rt = get_rt(inst);
+            if (inst == 0) {
+                printf("noop\n");
                 break;
-            case 1:
-                break;
-            case OP_J:
-                printf("J: %d\n", get_addr(inst));
-                break;
+            }
+            printf("%s %s %s %s\n",
+                    funct_table[funct],
+                    reg_table[rd],
+                    reg_table[rs],
+                    reg_table[rt]);
+            break;
+        case OP_BEQ:
+        case OP_BNE:
+            rs = get_rs(inst);
+            rt = get_rt(inst);
+            printf("%s %s, %s, %d\n",
+                    op_table[op],
+                    reg_table[rs],
+                    reg_table[rt],
+                    get_imm(inst));
+            break;
+        case OP_BLTZ:
+        case OP_BLEZ:
+        case OP_BGTZ:
+            rs = get_rs(inst);
+            printf("%s %s, %d\n",
+                    op_table[op],
+                    reg_table[rs],
+                    get_imm(inst));
+            break;
+        case OP_ADDI:
+        case OP_ADDIU:
+        case OP_SLTI:
+        case OP_SLTIU:
+        case OP_ANDI:
+        case OP_ORI:
+        case OP_XORI:
+            rt = get_rt(inst);
+            rs = get_rs(inst);
+            printf("%s %s, %s, %d\n",
+                    op_table[op],
+                    reg_table[rt],
+                    reg_table[rs],
+                    get_imm(inst));
+            break;
+        case OP_J:
+        case OP_JAL:
+            printf("%s %d\n",
+                    op_table[op],
+                    get_addr(inst));
+            break;
+        case OP_LB:
+        case OP_LH:
+        case OP_LWI:
+        case OP_LW:
+        case OP_LBU:
+        case OP_LHU:
+        case OP_LWR:
+        case OP_SB:
+        case OP_SH:
+        case OP_SWI:
+        case OP_SW:
+        case OP_SWR:
+            printf("%s %d(%s)\n",
+                    op_table[op],
+                    get_imm(inst),
+                    reg_table[rs]);
+            break;
+        default:
+            printf("ERR\n");
         }
-        printf("\n");
     }
 
     fclose(fout);
