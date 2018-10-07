@@ -1,14 +1,11 @@
-main: main.c
-	gcc main.c -o main -Wall
+main: main.c typedefs.h
+	gcc main.c -o main -Wall -std=c99
 
 clean:
 	rm -f main out
 
-test1:
-	./main -input trace/trace1.txt -output out1
+test:
+	./main trace/trace1.txt out.txt
 
 test2:
-	./main -input trace/trace2.txt -output out2
-
-test3:
-	./main -input trace/trace3.txt -output out3
+	./main trace/more.txt trace/more_ans.txt
