@@ -3,20 +3,16 @@
 #include <string.h>
 #include "typedefs.h"
 
+#define WRITE_FILE 1
+
 int h2d(char c);
-op_t get_op(inst_t inst);
-int get_rs(inst_t inst);
-int get_rt(inst_t inst);
-int get_rd(inst_t inst);
-int get_shamt(inst_t inst);
-int get_imm(inst_t inst);
-int get_addr(inst_t inst);
-funct_t get_funct(inst_t inst);
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2)
+    if (argc < 2) {
+        fprintf(stderr, "not enough argument\n");
         exit(0);
+    }
 
     FILE *fin = fopen(argv[1], "r");
     FILE *fout = fopen(argv[2], "w");
@@ -25,52 +21,88 @@ int main(int argc, char *argv[])
     inst_t inst = 0;
     while (!feof(fin)) {
         if (fgets(line, 20, fin) != NULL) {
-            inst = ((h2d(line[0]) << 28) +
-                    (h2d(line[1]) << 24) +
-                    (h2d(line[3]) << 20) +
-                    (h2d(line[4]) << 16) +
-                    (h2d(line[6]) << 12) +
-                    (h2d(line[7]) << 8 ) +
-                    (h2d(line[9]) << 4 ) +
-                    (h2d(line[10])));
+            inst = ((h2d(line[0]) << 28) + (h2d(line[1]) << 24) +
+                    (h2d(line[3]) << 20) + (h2d(line[4]) << 16) +
+                    (h2d(line[6]) << 12) + (h2d(line[7]) << 8 ) +
+                    (h2d(line[9]) << 4 ) + (h2d(line[10])));
+        } else {
+            break;
         }
         int op = get_op(inst);
-        int funct, rd, rs, rt;
+        int funct, rd, rs, rt, shamt;
         switch (op) {
         case OP_R:
             funct = get_funct(inst);
-            rd = get_rd(inst);
-            rs = get_rs(inst);
-            rt = get_rt(inst);
-            if (inst == 0) {
-                printf("noop\n");
-                break;
+            switch (funct) {
+            case F_SYSCALL:
+            case F_BREAK:
+                out("%s\n", funct_table[funct]);
+                goto nxt;
+
+            case F_JR:
+                rs = get_rs(inst);
+                out("%s %s\n",
+                        funct_table[funct],
+                        reg_table[rs]);
+                goto nxt;
+
+            case F_JALR:
+                rd = get_rd(inst);
+                rs = get_rs(inst);
+                out("%s %s, %s\n",
+                        funct_table[funct],
+                        reg_table[rd],
+                        reg_table[rs]);
+                goto nxt;
+
+            case F_SLL:
+            case F_SRL:
+                if (inst == 0) {
+                    out("nop\n");
+                    goto nxt;
+                }
+                rd = get_rd(inst);
+                rt = get_rt(inst);
+                shamt = get_shamt(inst);
+                out("%s %s, %s, %d\n",
+                        funct_table[funct],
+                        reg_table[rd],
+                        reg_table[rt],
+                        shamt);
+                goto nxt;
+
+            default:
+                rd = get_rd(inst);
+                rs = get_rs(inst);
+                rt = get_rt(inst);
+                out("%s %s, %s, %s\n",
+                        funct_table[funct],
+                        reg_table[rd],
+                        reg_table[rs],
+                        reg_table[rt]);
+                goto nxt;
             }
-            printf("%s %s %s %s\n",
-                    funct_table[funct],
-                    reg_table[rd],
-                    reg_table[rs],
-                    reg_table[rt]);
-            break;
         case OP_BEQ:
         case OP_BNE:
             rs = get_rs(inst);
             rt = get_rt(inst);
-            printf("%s %s, %s, %d\n",
+            out("%s %s, %s, %d\n",
                     op_table[op],
                     reg_table[rs],
                     reg_table[rt],
                     get_imm(inst));
             break;
+
         case OP_BLTZ:
         case OP_BLEZ:
         case OP_BGTZ:
             rs = get_rs(inst);
-            printf("%s %s, %d\n",
+            out("%s %s, %d\n",
                     op_table[op],
                     reg_table[rs],
                     get_imm(inst));
             break;
+
         case OP_ADDI:
         case OP_ADDIU:
         case OP_SLTI:
@@ -80,18 +112,20 @@ int main(int argc, char *argv[])
         case OP_XORI:
             rt = get_rt(inst);
             rs = get_rs(inst);
-            printf("%s %s, %s, %d\n",
+            out("%s %s, %s, %d\n",
                     op_table[op],
                     reg_table[rt],
                     reg_table[rs],
                     get_imm(inst));
             break;
+
         case OP_J:
         case OP_JAL:
-            printf("%s %d\n",
+            out("%s %d\n",
                     op_table[op],
                     get_addr(inst));
             break;
+
         case OP_LB:
         case OP_LH:
         case OP_LWI:
@@ -104,14 +138,19 @@ int main(int argc, char *argv[])
         case OP_SWI:
         case OP_SW:
         case OP_SWR:
-            printf("%s %d(%s)\n",
+            rs = get_rs(inst);
+            rt = get_rt(inst);
+            out("%s %s, %d(%s)\n",
                     op_table[op],
+                    reg_table[rt],
                     get_imm(inst),
                     reg_table[rs]);
             break;
+
         default:
-            printf("ERR\n");
+            out("ERR\n");
         }
+nxt:;
     }
 
     fclose(fout);
@@ -125,45 +164,7 @@ int h2d(char c)
         return c - '0';
     if (c >= 'A' && c <= 'F')
         return c - 'A' + 10;
+    if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
     return -1;
-}
-
-op_t get_op(inst_t inst)
-{
-    return inst >> 26;
-}
-
-int get_rs(inst_t inst)
-{
-    return (inst >> 21) & 31;
-}
-
-int get_rt(inst_t inst)
-{
-    return (inst >> 16) & 31;
-}
-
-int get_rd(inst_t inst)
-{
-    return (inst >> 11) & 31;
-}
-
-int get_shamt(inst_t inst)
-{
-    return (inst >> 6) & 31;
-}
-
-int get_imm(inst_t inst)
-{
-    return inst & 65535; /* 16-bit */
-}
-
-int get_addr(inst_t inst)
-{
-    return inst & 67108863; /* 26-bit */
-}
-
-funct_t get_funct(inst_t inst)
-{
-    return inst & 63;
 }

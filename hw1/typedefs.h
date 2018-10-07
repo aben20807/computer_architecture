@@ -32,6 +32,21 @@ const char *op_table[64] = { o000, o001, o010, o011, o100, o101, o110, o111 };
 #define f111 ""    , ""     , ""    , ""     , ""       , ""     , ""    , ""
 const char *funct_table[64] = { f000, f001, f010, f011, f100, f101, f110, f111 };
 
+#define get_op(x) x >> 26
+#define get_rs(x) (x >> 21) & 31
+#define get_rt(x) (x >> 16) & 31
+#define get_rd(x) (x >> 11) & 31
+#define get_shamt(x) (x >> 6) & 31
+#define get_imm(x) x & 65535
+#define get_addr(x) x & 67108863
+#define get_funct(x) x & 63
+#define out(...) \
+        do { \
+            if (WRITE_FILE) \
+                fprintf(fout, __VA_ARGS__); \
+            else \
+                printf(__VA_ARGS__); \
+        } while (0)
 
 typedef unsigned int inst_t;
 
