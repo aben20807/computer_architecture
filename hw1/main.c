@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
             break;
         }
         int op = get_op(inst);
-        int funct; //, rd, rs, rt, shamt;
+        int funct;
         switch (op) {
         case OP_R:
             funct = get_funct(inst);
@@ -40,15 +40,12 @@ int main(int argc, char *argv[])
                 goto nxt;
 
             case F_JR:
-                // rs = get_rs(inst);
                 out("%s %s\n",
                         funct_table[funct],
                         reg_table[get_rs(inst)]);
                 goto nxt;
 
             case F_JALR:
-                // rd = get_rd(inst);
-                // rs = get_rs(inst);
                 out("%s %s, %s\n",
                         funct_table[funct],
                         reg_table[get_rd(inst)],
@@ -61,9 +58,6 @@ int main(int argc, char *argv[])
                     out("nop\n");
                     goto nxt;
                 }
-                // rd = get_rd(inst);
-                // rt = get_rt(inst);
-                // shamt = get_shamt(inst);
                 out("%s %s, %s, %d\n",
                         funct_table[funct],
                         reg_table[get_rd(inst)],
@@ -72,9 +66,6 @@ int main(int argc, char *argv[])
                 goto nxt;
 
             default:
-                // rd = get_rd(inst);
-                // rs = get_rs(inst);
-                // rt = get_rt(inst);
                 out("%s %s, %s, %s\n",
                         funct_table[funct],
                         reg_table[get_rd(inst)],
@@ -84,8 +75,6 @@ int main(int argc, char *argv[])
             }
         case OP_BEQ:
         case OP_BNE:
-            // rs = get_rs(inst);
-            // rt = get_rt(inst);
             out("%s %s, %s, %d\n",
                     op_table[op],
                     reg_table[get_rs(inst)],
@@ -96,7 +85,6 @@ int main(int argc, char *argv[])
         case OP_BLTZ:
         case OP_BLEZ:
         case OP_BGTZ:
-            // rs = get_rs(inst);
             out("%s %s, %d\n",
                     op_table[op],
                     reg_table[get_rs(inst)],
@@ -110,8 +98,6 @@ int main(int argc, char *argv[])
         case OP_ANDI:
         case OP_ORI:
         case OP_XORI:
-            // rt = get_rt(inst);
-            // rs = get_rs(inst);
             out("%s %s, %s, %d\n",
                     op_table[op],
                     reg_table[get_rt(inst)],
@@ -138,8 +124,6 @@ int main(int argc, char *argv[])
         case OP_SWL:
         case OP_SW:
         case OP_SWR:
-            // rs = get_rs(inst);
-            // rt = get_rt(inst);
             out("%s %s, %d(%s)\n",
                     op_table[op],
                     reg_table[get_rt(inst)],
