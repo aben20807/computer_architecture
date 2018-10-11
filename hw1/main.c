@@ -36,8 +36,8 @@ int main(int argc, char *argv[])
         } else {
             goto close_out;
         }
-        int op = get_op(inst);
-        int funct;
+        op_t op = get_op(inst);
+        funct_t funct;
         switch (op) {
         case OP_R:
             funct = get_funct(inst);
