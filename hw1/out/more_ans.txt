@@ -41,8 +41,8 @@ lh $s1, 40($a0)
 sw $s1, 52($a0)
 sh $s1, 56($a0)
 slt $t0, $s1, $s0
-slti $t1, $s1, 65535
-jal 1048627
+slti $t1, $s1, -1
+jal 0x00100033
 nop
 addi $s0, $zero, 64
 sll $s0, $s0, 16
@@ -62,7 +62,7 @@ nop
 nop
 nop
 nop
-beq $t1, $zero, 65525
+beq $t1, $zero, -11
 nop
 nop
 nop

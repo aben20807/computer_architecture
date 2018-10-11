@@ -1,4 +1,4 @@
-j 18
+j 0x00000012
 nop
 addi $t4, $zero, 2
 slt $t4, $a0, $t4
@@ -12,9 +12,9 @@ add $t2, $t0, $t1
 add $t1, $t0, $zero
 add $t0, $t2, $zero
 addi $t3, $t3, 1
-bne $t3, $a0, 65531
+bne $t3, $a0, -5
 add $v0, $t0, $zero
 jr $ra
 nop
 addi $a0, $zero, 25
-jal 2
+jal 0x00000002
