@@ -16,10 +16,14 @@ int main(int argc, char *argv[])
     }
 
     FILE *fin, *fout;
-    if ((fin = fopen(argv[1], "r")) == NULL)
+    if ((fin = fopen(argv[1], "r")) == NULL) {
+        fprintf(stderr, "Error: Can't open `%s` for reading.\n", argv[1]);
         goto exit_prog;
-    if ((fout = fopen(argv[2], "w")) == NULL)
+    }
+    if ((fout = fopen(argv[2], "w")) == NULL) {
+        fprintf(stderr, "Error: Can't open `%s` for writing.\n", argv[2]);
         goto close_in;
+    }
 
     char line[20];
     inst_t inst = 0;
