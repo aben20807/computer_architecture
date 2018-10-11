@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
 
         case OP_J:
         case OP_JAL:
-            out("%s %d\n",
+            out("%s 0x%08x\n",
                     op_table[op],
                     get_addr(inst));
             break;
