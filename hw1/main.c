@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include "typedefs.h"
 
@@ -9,13 +8,18 @@ int h2d(char c);
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2) {
-        fprintf(stderr, "not enough argument\n");
-        exit(0);
+    if (argc != 3) {
+        fprintf(stderr, "%s%s",
+                "Not enough arguments, please follow:\n",
+                "`$ ./main <input> <output> `\n");
+        goto exit_prog;
     }
 
-    FILE *fin = fopen(argv[1], "r");
-    FILE *fout = fopen(argv[2], "w");
+    FILE *fin, *fout;
+    if ((fin = fopen(argv[1], "r")) == NULL)
+        goto exit_prog;
+    if ((fout = fopen(argv[2], "w")) == NULL)
+        goto close_in;
 
     char line[20];
     inst_t inst = 0;
@@ -26,7 +30,7 @@ int main(int argc, char *argv[])
                     (h2d(line[6]) << 12) + (h2d(line[7]) << 8 ) +
                     (h2d(line[9]) << 4 ) + (h2d(line[10])));
         } else {
-            break;
+            goto close_out;
         }
         int op = get_op(inst);
         int funct;
@@ -137,8 +141,13 @@ int main(int argc, char *argv[])
 nxt:;
     }
 
+close_out:
     fclose(fout);
+
+close_in:
     fclose(fin);
+
+exit_prog:
     return 0;
 }
 
