@@ -32,7 +32,7 @@ const char *op_table[64] = { o000, o001, o010, o011, o100, o101, o110, o111 };
 #define f111 ""    , ""     , ""    , ""     , ""       , ""     , ""    , ""
 const char *funct_table[64] = { f000, f001, f010, f011, f100, f101, f110, f111 };
 
-#define get_op(x) x >> 26
+#define get_op(x) (x >> 26) & 63
 #define get_rs(x) (x >> 21) & 31
 #define get_rt(x) (x >> 16) & 31
 #define get_rd(x) (x >> 11) & 31
