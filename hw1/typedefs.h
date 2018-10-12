@@ -37,7 +37,9 @@ const char *funct_table[64] = { f000, f001, f010, f011, f100, f101, f110, f111 }
 #define get_rt(x) ((x >> 16) & 31)
 #define get_rd(x) ((x >> 11) & 31)
 #define get_shamt(x) ((x >> 6) & 31)
-#define get_imm(x) (!(x & 32768) ? (x & 32767) : -1 * (((x & 32767) ^ 32767) + 1))
+#define sig(x) ((x >> 15) & 1)
+#define get_imm(x) \
+    ((1 - 2 * sig(x)) * (((x & 32767) ^ (32767 * sig(x))) - ((-1) * sig(x))))
 #define get_addr(x) (x & 67108863)
 #define get_funct(x) (x & 63)
 #define out(...) \
