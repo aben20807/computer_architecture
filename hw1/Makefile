@@ -4,8 +4,8 @@ main: main.c typedefs.h
 clean:
 	rm -f main out/*.txt
 
-test:
+test: main
 	./main trace/trace1.txt out/trace1_ans.txt
 
-test2:
+test2: main
 	./main trace/more.txt out/more_ans.txt
