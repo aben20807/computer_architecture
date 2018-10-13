@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
-#include "typedefs.h"
 
 #define WRITE_FILE 1
+#include "typedefs.h"
 
 int h2d(char c);
 

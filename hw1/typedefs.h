@@ -42,13 +42,12 @@ const char *funct_table[64] = { f000, f001, f010, f011, f100, f101, f110, f111 }
     ((1 - 2 * sig(x)) * (((x & 32767) ^ (32767 * sig(x))) - ((-1) * sig(x))))
 #define get_addr(x) (x & 67108863)
 #define get_funct(x) (x & 63)
-#define out(...) \
-        do { \
-            if (WRITE_FILE) \
-                fprintf(fout, __VA_ARGS__); \
-            else \
-                printf(__VA_ARGS__); \
-        } while (0)
+
+#if WRITE_FILE
+#define out(...) do { fprintf(fout, __VA_ARGS__); } while(0)
+#else
+#define out(...) do { printf(__VA_ARGS__); } while(0)
+#endif
 
 typedef unsigned int inst_t;
 
