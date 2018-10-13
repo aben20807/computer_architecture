@@ -25,6 +25,8 @@ int main(int argc, char *argv[])
         goto close_in;
     }
 
+    out("Hexadecimal    MIPS instruction\n");
+
     char line[20];
     inst_t inst = 0;
     while (!feof(fin)) {
@@ -36,6 +38,10 @@ int main(int argc, char *argv[])
         } else {
             goto close_out;
         }
+        char hex[12];
+        snprintf(hex, 12, "%s", line);
+        out("%s    ", hex);
+
         op_t op = get_op(inst);
         funct_t funct;
         switch (op) {
