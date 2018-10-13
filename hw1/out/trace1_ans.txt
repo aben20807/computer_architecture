@@ -1,20 +1,21 @@
-j 0x00000012
-nop
-addi $t4, $zero, 2
-slt $t4, $a0, $t4
-beq $t4, $zero, 2
-add $v0, $a0, $zero
-jr $ra
-addi $t0, $zero, 1
-addi $t1, $zero, 0
-addi $t3, $zero, 1
-add $t2, $t0, $t1
-add $t1, $t0, $zero
-add $t0, $t2, $zero
-addi $t3, $t3, 1
-bne $t3, $a0, -5
-add $v0, $t0, $zero
-jr $ra
-nop
-addi $a0, $zero, 25
-jal 0x00000002
+Hexadecimal    MIPS instruction
+08 00 00 12    j 0x00000012
+00 00 00 00    nop
+20 0C 00 02    addi $t4, $zero, 2
+00 8C 60 2A    slt $t4, $a0, $t4
+11 80 00 02    beq $t4, $zero, 2
+00 80 10 20    add $v0, $a0, $zero
+03 E0 00 08    jr $ra
+20 08 00 01    addi $t0, $zero, 1
+20 09 00 00    addi $t1, $zero, 0
+20 0B 00 01    addi $t3, $zero, 1
+01 09 50 20    add $t2, $t0, $t1
+01 00 48 20    add $t1, $t0, $zero
+01 40 40 20    add $t0, $t2, $zero
+21 6B 00 01    addi $t3, $t3, 1
+15 64 FF FB    bne $t3, $a0, -5
+01 00 10 20    add $v0, $t0, $zero
+03 E0 00 08    jr $ra
+00 00 00 00    nop
+20 04 00 19    addi $a0, $zero, 25
+0C 00 00 02    jal 0x00000002

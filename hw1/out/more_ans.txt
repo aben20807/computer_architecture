@@ -1,70 +1,71 @@
-nop
-nop
-nop
-nop
-nop
-nop
-nop
-nop
-nop
-addi $a0, $zero, 4096
-sll $a0, $a0, 16
-addi $s0, $zero, 16
-sw $s0, 0($a0)
-addi $s1, $zero, 31
-sw $s1, 4($a0)
-add $s2, $s0, $s1
-sw $s2, 8($a0)
-sub $s3, $s2, $s1
-sw $s3, 12($a0)
-and $s4, $s0, $s1
-sw $s4, 16($a0)
-andi $s5, $s0, 15
-sw $s5, 20($a0)
-xor $s6, $s0, $s1
-sw $s6, 24($a0)
-or $s7, $s0, $s6
-sw $s7, 28($a0)
-nor $t0, $s0, $s6
-sw $t0, 32($a0)
-nor $t1, $t0, $zero
-sw $t1, 36($a0)
-addi $s0, $zero, 32767
-sll $s0, $s0, 1
-addi $s0, $s0, 1
-sw $s0, 40($a0)
-srl $s1, $s0, 1
-sw $s1, 44($a0)
-lw $s0, 40($a0)
-sw $s0, 48($a0)
-lh $s1, 40($a0)
-sw $s1, 52($a0)
-sh $s1, 56($a0)
-slt $t0, $s1, $s0
-slti $t1, $s1, -1
-jal 0x00100033
-nop
-addi $s0, $zero, 64
-sll $s0, $s0, 16
-addi $s0, $s0, 256
-jalr $ra, $s0
-nop
-addi $s0, $zero, 426
-sw $s0, 60($a0)
-jr $ra
-bne $t0, $zero, 0
-addi $s0, $zero, 30678
-sw $s0, 64($a0)
-nop
-nop
-nop
-nop
-nop
-nop
-nop
-beq $t1, $zero, -11
-nop
-nop
-nop
-nop
-nop
+Hexadecimal    MIPS instruction
+00 00 00 00    nop
+00 00 00 00    nop
+00 00 00 00    nop
+00 00 00 00    nop
+00 00 00 00    nop
+00 00 00 00    nop
+00 00 00 00    nop
+00 00 00 00    nop
+00 00 00 00    nop
+20 04 10 00    addi $a0, $zero, 4096
+00 04 24 00    sll $a0, $a0, 16
+20 10 00 10    addi $s0, $zero, 16
+ac 90 00 00    sw $s0, 0($a0)
+20 11 00 1f    addi $s1, $zero, 31
+ac 91 00 04    sw $s1, 4($a0)
+02 11 90 20    add $s2, $s0, $s1
+ac 92 00 08    sw $s2, 8($a0)
+02 51 98 22    sub $s3, $s2, $s1
+ac 93 00 0c    sw $s3, 12($a0)
+02 11 a0 24    and $s4, $s0, $s1
+ac 94 00 10    sw $s4, 16($a0)
+32 15 00 0f    andi $s5, $s0, 15
+ac 95 00 14    sw $s5, 20($a0)
+02 11 b0 26    xor $s6, $s0, $s1
+ac 96 00 18    sw $s6, 24($a0)
+02 16 b8 25    or $s7, $s0, $s6
+ac 97 00 1c    sw $s7, 28($a0)
+02 16 40 27    nor $t0, $s0, $s6
+ac 88 00 20    sw $t0, 32($a0)
+01 00 48 27    nor $t1, $t0, $zero
+ac 89 00 24    sw $t1, 36($a0)
+20 10 7f ff    addi $s0, $zero, 32767
+00 10 80 40    sll $s0, $s0, 1
+22 10 00 01    addi $s0, $s0, 1
+ac 90 00 28    sw $s0, 40($a0)
+00 10 88 42    srl $s1, $s0, 1
+ac 91 00 2c    sw $s1, 44($a0)
+8c 90 00 28    lw $s0, 40($a0)
+ac 90 00 30    sw $s0, 48($a0)
+84 91 00 28    lh $s1, 40($a0)
+ac 91 00 34    sw $s1, 52($a0)
+a4 91 00 38    sh $s1, 56($a0)
+02 30 40 2a    slt $t0, $s1, $s0
+2a 29 ff ff    slti $t1, $s1, -1
+0c 10 00 33    jal 0x00100033
+00 00 00 00    nop
+20 10 00 40    addi $s0, $zero, 64
+00 10 84 00    sll $s0, $s0, 16
+22 10 01 00    addi $s0, $s0, 256
+02 00 f8 09    jalr $ra, $s0
+00 00 00 00    nop
+20 10 01 aa    addi $s0, $zero, 426
+ac 90 00 3c    sw $s0, 60($a0)
+03 e0 00 08    jr $ra
+15 00 00 00    bne $t0, $zero, 0
+20 10 77 d6    addi $s0, $zero, 30678
+ac 90 00 40    sw $s0, 64($a0)
+00 00 00 00    nop
+00 00 00 00    nop
+00 00 00 00    nop
+00 00 00 00    nop
+00 00 00 00    nop
+00 00 00 00    nop
+00 00 00 00    nop
+11 20 ff f5    beq $t1, $zero, -11
+00 00 00 00    nop
+00 00 00 00    nop
+00 00 00 00    nop
+00 00 00 00    nop
+00 00 00 00    nop
