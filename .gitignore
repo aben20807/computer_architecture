@@ -1,4 +1,5 @@
 *.swp
 *.exe
+*.o
 .gdb_history
 *.stackdump
