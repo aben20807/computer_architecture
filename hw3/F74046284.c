@@ -20,23 +20,23 @@ typedef struct _Address {
     // int offset;
 } Address;
 
-typedef struct _CacheLine {
+typedef struct _Block {
     int valid;
     int tag;
     // Data *data;
-} CacheLine;
+} Block;
 
 typedef struct _Set {
-    CacheLine *cachelines;
+    Block *blocks;
 } Set;
 
 typedef struct _Cache {
     int set_num;
-    int line_num_per_set;
+    int block_num_per_set;
     Set *sets;
 } Cache;
 
-Cache *create_cache(int set_num, int line_num_per_set);
+Cache *create_cache(int set_num, int block_num_per_set);
 void destroy_cache(Cache **cache);
 Address *get_addr(u64 hex, int set_num);
 
@@ -59,8 +59,8 @@ int main(int argc, char *argv[])
     // int set_num = nk / assoc;
     // create_cache(1, 200);
     Cache *c = create_cache(1, 200);
-    debug("%d\n", c->sets[0].cachelines[100].valid);
-    debug("%d\n", c->sets[0].cachelines[145].valid);
+    debug("%d\n", c->sets[0].blocks[100].valid);
+    debug("%d\n", c->sets[0].blocks[145].valid);
 
     destroy_cache(&c);
     return 0;
@@ -77,28 +77,28 @@ Address *get_addr(u64 hex, int set_num)
 /*
  * Function: create_cache
  * ----------------------
- * Create a cache with "set_num" sets which has "line_num_per_set" cachelines
+ * Create a cache with "set_num" sets which has "block_num_per_set" blocks
  *
  * set_num: number of sets in the cache
- * line_number_per_set: number of cachelines in each set
+ * block_number_per_set: number of blocks in each set
  *
  * returns: cache which is initialized valid and tag to 0
  */
-Cache *create_cache(int set_num, int line_num_per_set)
+Cache *create_cache(int set_num, int block_num_per_set)
 {
     Cache *ret = malloc(sizeof(Cache));
     Set *tmp_sets = malloc(sizeof(Set) * set_num);
     for (int i = 0; i < set_num; i++) {
-        CacheLine *tmp_lines = malloc(sizeof(CacheLine) * line_num_per_set);
-        for (int j = 0; j < line_num_per_set; j++) {
-            tmp_lines[j].valid = 0;
-            tmp_lines[j].tag = 0;
+        Block *tmp_blocks = malloc(sizeof(Block) * block_num_per_set);
+        for (int j = 0; j < block_num_per_set; j++) {
+            tmp_blocks[j].valid = 0;
+            tmp_blocks[j].tag = 0;
         }
-        tmp_sets[i].cachelines = tmp_lines;
+        tmp_sets[i].blocks = tmp_blocks;
     }
     ret->sets = tmp_sets;
     ret->set_num = set_num;
-    ret->line_num_per_set = line_num_per_set;
+    ret->block_num_per_set = block_num_per_set;
     return ret;
 }
 
@@ -113,7 +113,7 @@ void destroy_cache(Cache **cache)
 {
     int set_num = (*cache)->set_num;
     for (int i = 0; i < set_num; i++) {
-        free((*cache)->sets[i].cachelines);
+        free((*cache)->sets[i].blocks);
     }
     free((*cache)->sets);
     free(*cache);
