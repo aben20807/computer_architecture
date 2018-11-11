@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define DEBUG
 #ifdef DEBUG
@@ -53,15 +54,25 @@ int main(int argc, char *argv[])
     char repl = argv[4][0];
     debug("%d %d %d %c\n", nk, assoc, blocksize, repl);
 
-    int blocknum_per_set = nk * K / assoc / blocksize;
-    debug("%d\n", blocknum_per_set);
+    int set_num = nk * K / assoc / blocksize;
 
-    // int set_num = nk / assoc;
-    // create_cache(1, 200);
-    Cache *c = create_cache(1, 200);
-    debug("%d\n", c->sets[0].blocks[100].valid);
-    debug("%d\n", c->sets[0].blocks[145].valid);
+    Cache *c = create_cache(set_num, assoc);
+    debug("%d\n", c->sets[0].blocks[0].valid);
 
+    char mode;
+    u64 real_addr;
+    char buffer[20];
+    while (!feof(stdin)) {
+        if (fgets(buffer, 20, stdin) != NULL) {
+            mode = buffer[0];
+            real_addr = strtoull(buffer + 2, NULL, 16);
+            debug("%c %lld\n", mode, real_addr);
+        } else {
+            goto out;
+        }
+    }
+
+out:
     destroy_cache(&c);
     return 0;
 }
