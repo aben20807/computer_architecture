@@ -150,6 +150,15 @@ void destroy_cache(Cache **cache)
     *cache = NULL;
 }
 
+/*
+ * Function: create_seq_node
+ * -------------------------
+ * Create and return a node of sequence with setting block index
+ *
+ * block_index: the index used to point to specific block quickly
+ *
+ * returns: the seq node whit being initialized
+ */
 Seq *create_seq_node(int block_index)
 {
     Seq *ret = malloc(sizeof(Seq));
@@ -159,6 +168,14 @@ Seq *create_seq_node(int block_index)
     return ret;
 }
 
+/*
+ * Function: create_seq
+ * --------------------
+ * Return a sequence (circular doubly linked list)
+ *      ->[lru]<->[0]<->[1]<->[2]<->....<->[n]<->[mru]<-
+ *
+ * returns: the sequence
+ */
 Seq *create_seq(int num)
 {
     Seq *lru = create_seq_node(-1);
