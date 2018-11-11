@@ -53,6 +53,7 @@ void destroy_cache(Cache **cache);
 Seq *create_seq_node(int block_index);
 Seq *create_seq(int num);
 void destroy_seq(Seq **seq);
+void move_to_mru(Seq *seq, int target_index);
 Addr *get_addr(u64 real_addr, int set_num);
 bool find_addr(Cache *cache, Addr *addr);
 void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl);
@@ -74,11 +75,19 @@ int main(int argc, char *argv[])
 
     Cache *c = create_cache(set_num, assoc);
     // debug("%d\n", c->sets[0].blocks[0].valid);
-    // Seq *itr = c->sets[0].lru;
-    // while(itr->block_index != -2) {
-    //     debug("%d\n", itr->block_index);
-    //     itr = itr->nxt;
-    // }
+    Seq *itr = c->sets[0].block_seq;
+    while(itr->block_index != -2) {
+        debug("%d ", itr->block_index);
+        itr = itr->nxt;
+    }
+    debug("%d\n", itr->block_index);
+    move_to_mru(c->sets[0].block_seq, -2);
+    itr = c->sets[0].block_seq;
+    while(itr->block_index != -2) {
+        debug("%d ", itr->block_index);
+        itr = itr->nxt;
+    }
+    debug("%d\n", itr->block_index);
 
     // char mode;
     u64 real_addr;
@@ -90,8 +99,8 @@ int main(int argc, char *argv[])
             // debug("%c %lld\n", mode, real_addr);
             Addr *addr = get_addr(real_addr, set_num);
             debug("set: %d, tag: %d\n", addr->index, addr->tag);
-            bool is_hit = find_addr(c, addr);
-            debug("%s\n", is_hit ? "HIT" : "MISS");
+            // bool is_hit = find_addr(c, addr);
+            // debug("%s\n", is_hit ? "HIT" : "MISS");
         } else {
             goto out;
         }
@@ -188,6 +197,7 @@ Seq *create_seq(int num)
         itr = tmp;
     }
     itr->nxt = mru;
+    mru->pre = itr;
     mru->nxt = lru;
     lru->pre = mru;
     return lru;
@@ -210,6 +220,33 @@ void destroy_seq(Seq **seq)
     }
     free(itr);
     *seq = NULL;
+}
+
+/*
+ * Function: move_to_mru
+ * ---------------------
+ * Move the specific seq node to to the last (mru)
+ *
+ * seq: the sequence that need to do move operation
+ * target_index: the index need to move to the last,
+ *               if the index is illegal seq will not change
+ */
+void move_to_mru(Seq *seq, int target_index)
+{
+    Seq *itr = seq->nxt;
+    Seq *mru = seq->pre;
+    while (itr->block_index != -2) {
+        if (itr->block_index == target_index) {
+            itr->nxt->pre = itr->pre;
+            itr->pre->nxt = itr->nxt;
+            mru->pre->nxt = itr;
+            itr->pre = mru->pre;
+            mru->pre = itr;
+            itr->nxt = mru;
+            return;
+        }
+        itr = itr->nxt;
+    }
 }
 
 /*
