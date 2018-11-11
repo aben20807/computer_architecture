@@ -28,7 +28,16 @@ typedef struct _Block {
     // Data *data;
 } Block;
 
+typedef struct _Seq Seq;
+struct _Seq {   /* the sequence of blocks be used */
+    int block_index;
+    Seq *pre;
+    Seq *nxt;
+};
+
 typedef struct _Set {
+    Seq *lru;
+    Seq *mru;
     Block *blocks;
 } Set;
 
@@ -38,10 +47,15 @@ typedef struct _Cache {
     Set *sets;
 } Cache;
 
+typedef void (*ReplFunc)(Set *set, Addr *addr);
+
 Cache *create_cache(int set_num, int block_num_per_set);
 void destroy_cache(Cache **cache);
+Seq *create_seq_node(int block_index);
+Seq *create_seq(int num);
 Addr *get_addr(u64 real_addr, int set_num);
 bool find_addr(Cache *cache, Addr *addr);
+void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl);
 
 int main(int argc, char *argv[])
 {
@@ -60,6 +74,11 @@ int main(int argc, char *argv[])
 
     Cache *c = create_cache(set_num, assoc);
     // debug("%d\n", c->sets[0].blocks[0].valid);
+    // Seq *itr = c->sets[0].lru;
+    // while(itr->block_index != -2) {
+    //     debug("%d\n", itr->block_index);
+    //     itr = itr->nxt;
+    // }
 
     // char mode;
     u64 real_addr;
@@ -104,6 +123,8 @@ Cache *create_cache(int set_num, int block_num_per_set)
             tmp_blocks[j].tag = 0;
         }
         tmp_sets[i].blocks = tmp_blocks;
+        tmp_sets[i].lru = create_seq(block_num_per_set);
+        tmp_sets[i].mru = (tmp_sets[i].lru)->pre;
     }
     ret->sets = tmp_sets;
     ret->set_num = set_num;
@@ -127,6 +148,32 @@ void destroy_cache(Cache **cache)
     free((*cache)->sets);
     free(*cache);
     *cache = NULL;
+}
+
+Seq *create_seq_node(int block_index)
+{
+    Seq *ret = malloc(sizeof(Seq));
+    ret->block_index = block_index;
+    ret->pre = NULL;
+    ret->nxt = NULL;
+    return ret;
+}
+
+Seq *create_seq(int num)
+{
+    Seq *lru = create_seq_node(-1);
+    Seq *mru = create_seq_node(-2);
+    Seq *itr = lru;
+    for (int i = 0; i < num; i++) {
+        Seq *tmp = create_seq_node(i);
+        itr->nxt = tmp;
+        tmp->pre = itr;
+        itr = tmp;
+    }
+    itr->nxt = mru;
+    mru->nxt = lru;
+    lru->pre = mru;
+    return lru;
 }
 
 /*
@@ -171,4 +218,8 @@ bool find_addr(Cache *cache, Addr *addr)
         }
     }
     return false;
+}
+
+void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl)
+{
 }
