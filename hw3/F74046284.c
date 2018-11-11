@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define DEBUG
 #ifdef DEBUG
@@ -22,7 +23,7 @@ typedef struct _Addr {
 } Addr;
 
 typedef struct _Block {
-    int valid;
+    bool valid;
     int tag;
     // Data *data;
 } Block;
@@ -40,6 +41,7 @@ typedef struct _Cache {
 Cache *create_cache(int set_num, int block_num_per_set);
 void destroy_cache(Cache **cache);
 Addr *get_addr(u64 real_addr, int set_num);
+bool find_addr(Cache *cache, Addr *addr);
 
 int main(int argc, char *argv[])
 {
@@ -57,18 +59,20 @@ int main(int argc, char *argv[])
     int set_num = nk * K / assoc / blocksize;
 
     Cache *c = create_cache(set_num, assoc);
-    debug("%d\n", c->sets[0].blocks[0].valid);
+    // debug("%d\n", c->sets[0].blocks[0].valid);
 
-    char mode;
+    // char mode;
     u64 real_addr;
     char buffer[20];
     while (!feof(stdin)) {
         if (fgets(buffer, 20, stdin) != NULL) {
-            mode = buffer[0];
+            // mode = buffer[0];
             real_addr = strtoull(buffer + 2, NULL, 16);
-            debug("%c %lld\n", mode, real_addr);
+            // debug("%c %lld\n", mode, real_addr);
             Addr *addr = get_addr(real_addr, set_num);
             debug("set: %d, tag: %d\n", addr->index, addr->tag);
+            bool is_hit = find_addr(c, addr);
+            debug("%s\n", is_hit ? "HIT" : "MISS");
         } else {
             goto out;
         }
@@ -96,7 +100,7 @@ Cache *create_cache(int set_num, int block_num_per_set)
     for (int i = 0; i < set_num; i++) {
         Block *tmp_blocks = malloc(sizeof(Block) * block_num_per_set);
         for (int j = 0; j < block_num_per_set; j++) {
-            tmp_blocks[j].valid = 0;
+            tmp_blocks[j].valid = false;
             tmp_blocks[j].tag = 0;
         }
         tmp_sets[i].blocks = tmp_blocks;
@@ -141,4 +145,30 @@ Addr *get_addr(u64 real_addr, int set_num)
     ret->tag = real_addr / set_num;
     ret->index = real_addr % set_num;
     return ret;
+}
+
+/*
+ * Function: find_addr
+ * -------------------
+ * check addr if hit in cache
+ *
+ * cache: the cache
+ * addr: the address for the cache
+ *
+ * returns: boolean, true if hit, false if miss
+ */
+bool find_addr(Cache *cache, Addr *addr)
+{
+    int index = addr->index;
+    Set addr_set = cache->sets[index];
+    int addr_tag = addr->tag;
+
+    int n = cache->block_num_per_set;
+    for (int i = 0; i < n; i++) {
+        if (addr_set.blocks[i].valid == true &&
+                addr_set.blocks[i].tag == addr_tag) {
+            return true;
+        }
+    }
+    return false;
 }
