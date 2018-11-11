@@ -3,6 +3,8 @@ CFLAGS = -Wall -Werror
 EXEC = cache
 OBJS = F74046284.o
 
+.PHONY: all clean test
+
 all: $(EXEC)
 
 $(EXEC): $(OBJS)
@@ -14,5 +16,5 @@ $(EXEC): $(OBJS)
 clean:
 	rm -f $(EXEC) *.o
 
-test1: $(EXEC)
-	./cache 2048 64 64 l
+test: $(EXEC)
+	./cache 2048 64 64 l < trace/t.txt
