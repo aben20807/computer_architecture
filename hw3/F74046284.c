@@ -15,11 +15,11 @@
 #define K 1024
 
 typedef unsigned long long u64;
-typedef struct _Address {
+typedef struct _Addr {
     int tag;
     int index;
     // int offset;
-} Address;
+} Addr;
 
 typedef struct _Block {
     int valid;
@@ -39,7 +39,7 @@ typedef struct _Cache {
 
 Cache *create_cache(int set_num, int block_num_per_set);
 void destroy_cache(Cache **cache);
-Address *get_addr(u64 hex, int set_num);
+Addr *get_addr(u64 real_addr, int set_num);
 
 int main(int argc, char *argv[])
 {
@@ -67,6 +67,8 @@ int main(int argc, char *argv[])
             mode = buffer[0];
             real_addr = strtoull(buffer + 2, NULL, 16);
             debug("%c %lld\n", mode, real_addr);
+            Addr *addr = get_addr(real_addr, set_num);
+            debug("set: %d, tag: %d\n", addr->index, addr->tag);
         } else {
             goto out;
         }
@@ -75,14 +77,6 @@ int main(int argc, char *argv[])
 out:
     destroy_cache(&c);
     return 0;
-}
-
-Address *get_addr(u64 hex, int set_num)
-{
-    Address *ret = malloc(sizeof(Address));
-    ret->tag = 0;
-    ret->index = 0;
-    return ret;
 }
 
 /*
@@ -129,4 +123,22 @@ void destroy_cache(Cache **cache)
     free((*cache)->sets);
     free(*cache);
     *cache = NULL;
+}
+
+/*
+ * Function: get_addr
+ * ------------------
+ * Create and return the cache address by real address and the number of set
+ *
+ * real_addr: the real address
+ * set_num: the number of sets
+ *
+ * returns: the Addr struct contains tag and index
+ */
+Addr *get_addr(u64 real_addr, int set_num)
+{
+    Addr *ret = malloc(sizeof(Addr));
+    ret->tag = real_addr / set_num;
+    ret->index = real_addr % set_num;
+    return ret;
 }
