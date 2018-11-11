@@ -36,8 +36,7 @@ struct _Seq {   /* the sequence of blocks be used */
 };
 
 typedef struct _Set {
-    Seq *lru;
-    Seq *mru;
+    Seq *block_seq;
     Block *blocks;
 } Set;
 
@@ -53,6 +52,7 @@ Cache *create_cache(int set_num, int block_num_per_set);
 void destroy_cache(Cache **cache);
 Seq *create_seq_node(int block_index);
 Seq *create_seq(int num);
+void destroy_seq(Seq **seq);
 Addr *get_addr(u64 real_addr, int set_num);
 bool find_addr(Cache *cache, Addr *addr);
 void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl);
@@ -123,8 +123,7 @@ Cache *create_cache(int set_num, int block_num_per_set)
             tmp_blocks[j].tag = 0;
         }
         tmp_sets[i].blocks = tmp_blocks;
-        tmp_sets[i].lru = create_seq(block_num_per_set);
-        tmp_sets[i].mru = (tmp_sets[i].lru)->pre;
+        tmp_sets[i].block_seq = create_seq(block_num_per_set);
     }
     ret->sets = tmp_sets;
     ret->set_num = set_num;
@@ -143,6 +142,7 @@ void destroy_cache(Cache **cache)
 {
     int set_num = (*cache)->set_num;
     for (int i = 0; i < set_num; i++) {
+        destroy_seq(&((*cache)->sets[i].block_seq));
         free((*cache)->sets[i].blocks);
     }
     free((*cache)->sets);
@@ -191,6 +191,25 @@ Seq *create_seq(int num)
     mru->nxt = lru;
     lru->pre = mru;
     return lru;
+}
+
+/*
+ * Function: destroy_seq
+ * ---------------------
+ * Destroy the block sequence
+ *
+ * seq: the sequence that need to be destroied
+ */
+void destroy_seq(Seq **seq)
+{
+    Seq *itr = *seq;
+    while(itr->block_index != -2) {
+        Seq *nxt = itr->nxt;
+        free(itr);
+        itr = nxt;
+    }
+    free(itr);
+    *seq = NULL;
 }
 
 /*
