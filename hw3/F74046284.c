@@ -46,7 +46,7 @@ typedef struct _Cache {
     Set *sets;
 } Cache;
 
-typedef void (*ReplFunc)(Set *set, Addr *addr);
+typedef int (*ReplFunc)(Set *set);
 
 Cache *create_cache(int set_num, int block_num_per_set);
 void destroy_cache(Cache **cache);
@@ -56,6 +56,8 @@ void destroy_seq(Seq **seq);
 void move_to_mru(Seq *seq, int target_index);
 Addr *get_addr(u64 real_addr, int set_num);
 bool find_addr(Cache *cache, Addr *addr);
+int repl_lru(Set *set);
+int repl_random(Set *set);
 void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl);
 
 int main(int argc, char *argv[])
@@ -70,9 +72,17 @@ int main(int argc, char *argv[])
     int blocksize = atoi(argv[3]);
     char repl = argv[4][0];
     debug("%d %d %d %c\n", nk, assoc, blocksize, repl);
+    ReplFunc repl_func;
+    if (repl == 'l') {
+        repl_func = repl_lru;
+    }
 
     int set_num = nk * K / assoc / blocksize;
 
+    int r_miss_count = 0;
+    int r_access_count = 0;
+    int w_miss_count = 0;
+    int w_access_count = 0;
     Cache *c = create_cache(set_num, assoc);
     // debug("%d\n", c->sets[0].blocks[0].valid);
     Seq *itr = c->sets[0].block_seq;
@@ -89,17 +99,25 @@ int main(int argc, char *argv[])
     }
     debug("%d\n", itr->block_index);
 
-    // char mode;
+    char mode;
     u64 real_addr;
     char buffer[20];
     while (!feof(stdin)) {
         if (fgets(buffer, 20, stdin) != NULL) {
-            // mode = buffer[0];
+            mode = buffer[0];
+            r_access_count += (mode == 'r') ? 1 : 0;
+            w_access_count += (mode == 'w') ? 1 : 0;
+
             real_addr = strtoull(buffer + 2, NULL, 16);
             // debug("%c %lld\n", mode, real_addr);
             Addr *addr = get_addr(real_addr, set_num);
             debug("set: %d, tag: %d\n", addr->index, addr->tag);
-            // bool is_hit = find_addr(c, addr);
+            bool is_hit = find_addr(c, addr);
+            if (!is_hit) {
+                r_miss_count += (mode == 'r') ? 1 : 0;
+                w_miss_count += (mode == 'w') ? 1 : 0;
+                load_from_mem(c, addr, repl_func);
+            }
             // debug("%s\n", is_hit ? "HIT" : "MISS");
         } else {
             goto out;
@@ -107,6 +125,8 @@ int main(int argc, char *argv[])
     }
 
 out:
+    printf("%d %d %d %d\n",
+            r_access_count, r_miss_count, w_access_count, w_miss_count);
     destroy_cache(&c);
     return 0;
 }
@@ -293,6 +313,26 @@ bool find_addr(Cache *cache, Addr *addr)
     return false;
 }
 
+int repl_lru(Set *set)
+{
+    Seq *seq = set->block_seq;
+    int lru_index = seq->nxt->block_index;
+    move_to_mru(seq, lru_index);
+    return lru_index;
+}
+
+int repl_random(Set *set)
+{
+    return 0;
+}
+
 void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl)
 {
+    int index = addr->index;
+    Set addr_set = cache->sets[index];
+    int addr_tag = addr->tag;
+
+    int repl_index = repl(&addr_set);
+    addr_set.blocks[repl_index].valid = true;
+    addr_set.blocks[repl_index].tag = addr_tag;
 }
