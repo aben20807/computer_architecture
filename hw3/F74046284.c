@@ -294,7 +294,8 @@ Addr *get_addr(u64 real_addr, int set_num)
 /*
  * Function: find_addr
  * -------------------
- * check addr if hit in cache
+ * check addr if hit in cache, move hit block to mru when replacement policy
+ * is lru
  *
  * cache: the cache
  * addr: the address for the cache
@@ -304,14 +305,14 @@ Addr *get_addr(u64 real_addr, int set_num)
 bool find_addr(Cache *cache, Addr *addr, ReplFunc repl)
 {
     int index = addr->index;
-    Set addr_set = cache->sets[index];
+    Set *addr_set = &(cache->sets[index]);
     int addr_tag = addr->tag;
-    Seq *seq = addr_set.block_seq;
+    Seq *seq = addr_set->block_seq;
 
     int n = cache->block_num_per_set;
     for (int i = 0; i < n; i++) {
-        if (addr_set.blocks[i].valid == true &&
-                addr_set.blocks[i].tag == addr_tag) {
+        if (addr_set->blocks[i].valid == true &&
+                addr_set->blocks[i].tag == addr_tag) {
             if (repl == repl_lru) {
                 move_to_mru(seq, i);
             }
