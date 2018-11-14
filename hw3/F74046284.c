@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-#define DEBUG
+// #define DEBUG
 #ifdef DEBUG
 #define debug(...) do { printf(__VA_ARGS__); } while(0)
 #else
@@ -55,7 +55,7 @@ Seq *create_seq(int num);
 void destroy_seq(Seq **seq);
 void move_to_mru(Seq *seq, int target_index);
 Addr *get_addr(u64 real_addr, int set_num);
-bool find_addr(Cache *cache, Addr *addr);
+bool find_addr(Cache *cache, Addr *addr, ReplFunc repl);
 int repl_lru(Set *set);
 int repl_random(Set *set);
 void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl);
@@ -112,21 +112,29 @@ int main(int argc, char *argv[])
             // debug("%c %lld\n", mode, real_addr);
             Addr *addr = get_addr(real_addr, set_num);
             debug("set: %d, tag: %d\n", addr->index, addr->tag);
-            bool is_hit = find_addr(c, addr);
+            bool is_hit = find_addr(c, addr, repl_func);
+            debug("%s\n", is_hit ? "HIT" : "MISS");
             if (!is_hit) {
                 r_miss_count += (mode == 'r') ? 1 : 0;
                 w_miss_count += (mode == 'w') ? 1 : 0;
                 load_from_mem(c, addr, repl_func);
             }
-            // debug("%s\n", is_hit ? "HIT" : "MISS");
         } else {
             goto out;
         }
     }
 
-out:
-    printf("%d %d %d %d\n",
-            r_access_count, r_miss_count, w_access_count, w_miss_count);
+out:;
+    int total_miss_count = r_miss_count + w_miss_count;
+    int total_access_count = r_access_count + w_access_count;
+    printf("%d %lf%% %d %lf%% %d %lf%%\n",
+            total_miss_count,
+            (double) total_miss_count / total_access_count * 100,
+            r_miss_count,
+            (double) r_miss_count / r_access_count * 100,
+            w_miss_count,
+            (double) w_miss_count / w_access_count * 100
+        );
     destroy_cache(&c);
     return 0;
 }
@@ -297,16 +305,20 @@ Addr *get_addr(u64 real_addr, int set_num)
  *
  * returns: boolean, true if hit, false if miss
  */
-bool find_addr(Cache *cache, Addr *addr)
+bool find_addr(Cache *cache, Addr *addr, ReplFunc repl)
 {
     int index = addr->index;
     Set addr_set = cache->sets[index];
     int addr_tag = addr->tag;
+    Seq *seq = addr_set.block_seq;
 
     int n = cache->block_num_per_set;
     for (int i = 0; i < n; i++) {
         if (addr_set.blocks[i].valid == true &&
                 addr_set.blocks[i].tag == addr_tag) {
+            if (repl == repl_lru) {
+                move_to_mru(seq, i);
+            }
             return true;
         }
     }
