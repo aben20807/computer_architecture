@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <time.h>
 
 // #define DEBUG
 #ifdef DEBUG
@@ -36,6 +37,7 @@ struct _Seq {   /* the sequence of blocks be used */
 };
 
 typedef struct _Set {
+    int block_num;
     Seq *block_seq;
     Block *blocks;
 } Set;
@@ -66,6 +68,9 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Need 4 arguments but get %d\n", argc - 1);
         exit(1);
     }
+
+    srand(time(NULL));
+
     /* Get the values of arguments */
     int nk = atoi(argv[1]);
     int assoc = atoi(argv[2]);
@@ -75,6 +80,8 @@ int main(int argc, char *argv[])
     ReplFunc repl_func;
     if (repl == 'l') {
         repl_func = repl_lru;
+    } else if (repl == 'r') {
+        repl_func = repl_random;
     }
 
     int set_num = nk * K / assoc / blocksize;
@@ -84,20 +91,6 @@ int main(int argc, char *argv[])
     int w_miss_count = 0;
     int w_access_count = 0;
     Cache *c = create_cache(set_num, assoc);
-    // debug("%d\n", c->sets[0].blocks[0].valid);
-    Seq *itr = c->sets[0].block_seq;
-    while(itr->block_index != -2) {
-        debug("%d ", itr->block_index);
-        itr = itr->nxt;
-    }
-    debug("%d\n", itr->block_index);
-    move_to_mru(c->sets[0].block_seq, -2);
-    itr = c->sets[0].block_seq;
-    while(itr->block_index != -2) {
-        debug("%d ", itr->block_index);
-        itr = itr->nxt;
-    }
-    debug("%d\n", itr->block_index);
 
     char mode;
     u64 real_addr;
@@ -109,7 +102,7 @@ int main(int argc, char *argv[])
             w_access_count += (mode == 'w') ? 1 : 0;
 
             real_addr = strtoull(buffer + 2, NULL, 16);
-            // debug("%c %lld\n", mode, real_addr);
+            debug("%c %lld\n", mode, real_addr);
             Addr *addr = get_addr(real_addr, set_num);
             debug("set: %d, tag: %d\n", addr->index, addr->tag);
             bool is_hit = find_addr(c, addr, repl_func);
@@ -159,6 +152,7 @@ Cache *create_cache(int set_num, int block_num_per_set)
             tmp_blocks[j].valid = false;
             tmp_blocks[j].tag = 0;
         }
+        tmp_sets[i].block_num = block_num_per_set;
         tmp_sets[i].blocks = tmp_blocks;
         tmp_sets[i].block_seq = create_seq(block_num_per_set);
     }
@@ -335,7 +329,7 @@ int repl_lru(Set *set)
 
 int repl_random(Set *set)
 {
-    return 0;
+    return rand() % (set->block_num);
 }
 
 void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl)
