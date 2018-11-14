@@ -37,6 +37,7 @@ struct _Seq {   /* the sequence of blocks be used */
 };
 
 typedef struct _Set {
+    int block_count;
     int block_num;
     Seq *block_seq;
     Block *blocks;
@@ -152,6 +153,7 @@ Cache *create_cache(int set_num, int block_num_per_set)
             tmp_blocks[j].valid = false;
             tmp_blocks[j].tag = 0;
         }
+        tmp_sets[i].block_count = 0;
         tmp_sets[i].block_num = block_num_per_set;
         tmp_sets[i].blocks = tmp_blocks;
         tmp_sets[i].block_seq = create_seq(block_num_per_set);
@@ -332,13 +334,29 @@ int repl_random(Set *set)
     return rand() % (set->block_num);
 }
 
+/*
+ * Function: load_from_mem
+ * -----------------------
+ * load block from memory to cache, if set is full then replace one block
+ *
+ * cache: the cache
+ * addr: the address of block need to be loaded
+ * repl: the replacement algorithm
+ */
 void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl)
 {
     int index = addr->index;
-    Set addr_set = cache->sets[index];
+    Set *addr_set = &(cache->sets[index]);
     int addr_tag = addr->tag;
 
-    int repl_index = repl(&addr_set);
-    addr_set.blocks[repl_index].valid = true;
-    addr_set.blocks[repl_index].tag = addr_tag;
+    int load_index = 0;
+    if (addr_set->block_count < addr_set->block_num) {
+        load_index = addr_set->block_seq->nxt->block_index;
+        move_to_mru(addr_set->block_seq, load_index);
+        addr_set->block_count++;
+    } else {
+        load_index = repl(addr_set);
+    }
+    addr_set->blocks[load_index].valid = true;
+    addr_set->blocks[load_index].tag = addr_tag;
 }
