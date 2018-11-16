@@ -104,8 +104,10 @@ int main(int argc, char *argv[])
 
             real_addr = strtoull(buffer + 2, NULL, 16);
             debug("%c %lld\n", mode, real_addr);
+
             Addr *addr = get_addr(real_addr, set_num, blocksize);
             debug("set: %d, tag: %d\n", addr->index, addr->tag);
+
             bool is_hit = find_addr(c, addr, repl_func);
             debug("%s\n", is_hit ? "HIT" : "MISS");
             if (!is_hit) {
@@ -323,14 +325,29 @@ bool find_addr(Cache *cache, Addr *addr, ReplFunc repl)
     return false;
 }
 
+/*
+ * Function: repl_lru
+ * ------------------
+ * Return the index of lru side block
+ *
+ * set: the set which contain the sequence infomation
+ *
+ * returns: the lru index
+ */
 int repl_lru(Set *set)
 {
-    Seq *seq = set->block_seq;
-    int lru_index = seq->nxt->block_index;
-    move_to_mru(seq, lru_index);
-    return lru_index;
+    return set->block_seq->nxt->block_index;
 }
 
+/*
+ * Function: repl_random
+ * ------------------
+ * return the random index amount the set size
+ *
+ * set: the set which contain the size infomation
+ *
+ * returns: the random index
+ */
 int repl_random(Set *set)
 {
     return rand() % (set->block_num);
@@ -353,12 +370,12 @@ void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl)
 
     int load_index = 0;
     if (addr_set->block_count < addr_set->block_num) {
-        load_index = addr_set->block_seq->nxt->block_index;
-        move_to_mru(addr_set->block_seq, load_index);
+        load_index = repl_lru(addr_set);
         addr_set->block_count++;
     } else {
         load_index = repl(addr_set);
     }
     addr_set->blocks[load_index].valid = true;
     addr_set->blocks[load_index].tag = addr_tag;
+    move_to_mru(addr_set->block_seq, load_index);
 }
