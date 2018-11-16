@@ -57,7 +57,7 @@ Seq *create_seq_node(int block_index);
 Seq *create_seq(int num);
 void destroy_seq(Seq **seq);
 void move_to_mru(Seq *seq, int target_index);
-Addr *get_addr(u64 real_addr, int set_num);
+Addr *get_addr(u64 real_addr, int set_num, int block_size);
 bool find_addr(Cache *cache, Addr *addr, ReplFunc repl);
 int repl_lru(Set *set);
 int repl_random(Set *set);
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 
             real_addr = strtoull(buffer + 2, NULL, 16);
             debug("%c %lld\n", mode, real_addr);
-            Addr *addr = get_addr(real_addr, set_num);
+            Addr *addr = get_addr(real_addr, set_num, blocksize);
             debug("set: %d, tag: %d\n", addr->index, addr->tag);
             bool is_hit = find_addr(c, addr, repl_func);
             debug("%s\n", is_hit ? "HIT" : "MISS");
@@ -283,11 +283,12 @@ void move_to_mru(Seq *seq, int target_index)
  *
  * returns: the Addr struct contains tag and index
  */
-Addr *get_addr(u64 real_addr, int set_num)
+Addr *get_addr(u64 real_addr, int set_num, int block_size)
 {
+    int index_mask = set_num - 1;
     Addr *ret = malloc(sizeof(Addr));
-    ret->tag = real_addr / set_num;
-    ret->index = real_addr % set_num;
+    ret->index = (real_addr / block_size) & index_mask;
+    ret->tag = (real_addr / block_size) & (~index_mask);
     return ret;
 }
 
