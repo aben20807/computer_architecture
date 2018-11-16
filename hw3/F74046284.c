@@ -77,15 +77,9 @@ int main(int argc, char *argv[])
     int blocksize = atoi(argv[3]);
     char repl = argv[4][0];
     debug("%d %d %d %c\n", nk, assoc, blocksize, repl);
-    ReplFunc repl_func;
-    if (repl == 'l') {
-        repl_func = repl_lru;
-    } else if (repl == 'r') {
-        repl_func = repl_random;
-    }
 
+    ReplFunc repl_func = (repl == 'l') ? repl_lru : repl_random;
     int set_num = nk * K / assoc / blocksize;
-
     int r_miss_count = 0;
     int r_access_count = 0;
     int w_miss_count = 0;
@@ -358,7 +352,7 @@ int repl_random(Set *set)
  *
  * cache: the cache
  * addr: the address of block need to be loaded
- * repl: the replacement algorithm
+ * repl: the replacement algorithm for getting the replace index
  */
 void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl)
 {
