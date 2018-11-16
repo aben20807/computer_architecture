@@ -45,7 +45,6 @@ typedef struct _Set {
 
 typedef struct _Cache {
     int set_num;
-    int block_num_per_set;
     Set *sets;
 } Cache;
 
@@ -162,7 +161,6 @@ Cache *create_cache(int set_num, int block_num_per_set)
     }
     ret->sets = tmp_sets;
     ret->set_num = set_num;
-    ret->block_num_per_set = block_num_per_set;
     return ret;
 }
 
@@ -312,7 +310,7 @@ bool find_addr(Cache *cache, Addr *addr, ReplFunc repl)
     int addr_tag = addr->tag;
     Seq *seq = addr_set->block_seq;
 
-    int n = cache->block_num_per_set;
+    int n = addr_set->block_num;
     for (int i = 0; i < n; i++) {
         if (addr_set->blocks[i].valid == true &&
                 addr_set->blocks[i].tag == addr_tag) {
