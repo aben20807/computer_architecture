@@ -17,5 +17,4 @@ clean:
 	rm -f $(EXEC) *.o
 
 test: $(EXEC)
-	gzip -dc trace/429.mcf-184B.trace.txt.gz | ./cache 2048 64 64 l
-	gzip -dc trace/429.mcf-184B.trace.txt.gz | ./cache 2048 64 64 r
+	./cache

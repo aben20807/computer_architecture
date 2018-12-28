@@ -3,3 +3,4 @@
 *.o
 .gdb_history
 *.stackdump
+cache
