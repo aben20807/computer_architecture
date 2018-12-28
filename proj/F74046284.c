@@ -48,8 +48,22 @@ typedef struct _Cache {
     Set *sets;
 } Cache;
 
+typedef struct _CacheConfig {
+    int m;
+    int mcs;
+    int es;
+    int a;
+    int *ib;
+    int ib_cnt;
+    int vcs;
+    int tu;
+    int mctu;
+    int abg[3];
+} CacheConfig;
+
 typedef int (*ReplFunc)(Set *set);
 
+CacheConfig read_cache_config(const char *filename);
 Cache *create_cache(int set_num, int block_num_per_set);
 void destroy_cache(Cache **cache);
 Seq *create_seq_node(int block_index);
@@ -64,68 +78,140 @@ void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl);
 
 int main(int argc, char *argv[])
 {
-    if (argc != 5) {
-        fprintf(stderr, "Need 4 arguments but get %d\n", argc - 1);
+    if (argc != 3) {
+        fprintf(stderr, "Need 2 arguments but get %d\n", argc - 1);
         exit(1);
     }
 
-    srand(time(NULL));
+    // srand(time(NULL));
+
+    printf("%s\n", argv[1]);
+    printf("%s\n", argv[2]);
+
+    CacheConfig cc = read_cache_config(argv[1]);
 
     /* Get the values of arguments */
-    int nk = atoi(argv[1]);
-    int assoc = atoi(argv[2]);
-    int blocksize = atoi(argv[3]);
-    char repl = argv[4][0];
-    debug("%d %d %d %c\n", nk, assoc, blocksize, repl);
+    // int nk = atoi(argv[1]);
+    //
+    // int assoc = atoi(argv[2]);
+    // int blocksize = atoi(argv[3]);
+    // char repl = argv[4][0];
+    // debug("%d %d %d %c\n", nk, assoc, blocksize, repl);
+    //
+    // ReplFunc repl_func = (repl == 'l') ? repl_lru : repl_random;
+    // int set_num = nk * K / assoc / blocksize;
+    // int r_miss_count = 0;
+    // int r_access_count = 0;
+    // int w_miss_count = 0;
+    // int w_access_count = 0;
+    // Cache *c = create_cache(set_num, assoc);
 
-    ReplFunc repl_func = (repl == 'l') ? repl_lru : repl_random;
-    int set_num = nk * K / assoc / blocksize;
-    int r_miss_count = 0;
-    int r_access_count = 0;
-    int w_miss_count = 0;
-    int w_access_count = 0;
-    Cache *c = create_cache(set_num, assoc);
+    // char mode;
+    // u64 real_addr;
+    // char buffer[20];
+    // while (!feof(stdin)) {
+    //     if (fgets(buffer, 20, stdin) != NULL) {
+    //         mode = buffer[0];
+    //         r_access_count += (mode == 'r') ? 1 : 0;
+    //         w_access_count += (mode == 'w') ? 1 : 0;
+    //
+    //         real_addr = strtoull(buffer + 2, NULL, 16);
+    //         debug("%c %lld\n", mode, real_addr);
+    //
+    //         Addr *addr = get_addr(real_addr, set_num, blocksize);
+    //         debug("set: %d, tag: %d\n", addr->index, addr->tag);
+    //
+    //         bool is_hit = find_addr(c, addr, repl_func);
+    //         debug("%s\n", is_hit ? "HIT" : "MISS");
+    //         if (!is_hit) {
+    //             r_miss_count += (mode == 'r') ? 1 : 0;
+    //             w_miss_count += (mode == 'w') ? 1 : 0;
+    //             load_from_mem(c, addr, repl_func);
+    //         }
+    //     } else {
+    //         goto out;
+    //     }
+    // }
+    //
+    // out:;
+    // int total_miss_count = r_miss_count + w_miss_count;
+    // int total_access_count = r_access_count + w_access_count;
+    // printf("%d %lf%% %d %lf%% %d %lf%%\n",
+    //         total_miss_count,
+    //         (double) total_miss_count / total_access_count * 100,
+    //         r_miss_count,
+    //         (double) r_miss_count / r_access_count * 100,
+    //         w_miss_count,
+    //         (double) w_miss_count / w_access_count * 100
+    //     );
+    // destroy_cache(&c);
+    return 0;
+}
 
-    char mode;
-    u64 real_addr;
-    char buffer[20];
-    while (!feof(stdin)) {
-        if (fgets(buffer, 20, stdin) != NULL) {
-            mode = buffer[0];
-            r_access_count += (mode == 'r') ? 1 : 0;
-            w_access_count += (mode == 'w') ? 1 : 0;
-
-            real_addr = strtoull(buffer + 2, NULL, 16);
-            debug("%c %lld\n", mode, real_addr);
-
-            Addr *addr = get_addr(real_addr, set_num, blocksize);
-            debug("set: %d, tag: %d\n", addr->index, addr->tag);
-
-            bool is_hit = find_addr(c, addr, repl_func);
-            debug("%s\n", is_hit ? "HIT" : "MISS");
-            if (!is_hit) {
-                r_miss_count += (mode == 'r') ? 1 : 0;
-                w_miss_count += (mode == 'w') ? 1 : 0;
-                load_from_mem(c, addr, repl_func);
+CacheConfig read_cache_config(const char *filename)
+{
+    CacheConfig ret = {};
+    FILE *in = fopen(filename, "r");
+    if (!in) {
+        fprintf(stderr, "Fail to open Cache.txt at %s\n", filename);
+        return ret;
+    }
+    char buffer[80];
+    while (!feof(in)) {
+        if (fgets(buffer, 80, in) != NULL) {
+            if (buffer[0] == '#') { // comment
+                continue;
             }
-        } else {
-            goto out;
+            // printf("%s", buffer);
+            char *ptr = strtok(buffer, " \n\t\r");
+            printf("\n'%s'\n", ptr);
+
+            char *end;
+            if (!strcmp(buffer, "M")) {
+                ret.m = (int) strtol(ptr, &end, 10);
+            } else if (!strcmp(buffer, "MCS")) {
+                ret.mcs = (int) strtol(ptr, &end, 10);
+            } else if (!strcmp(buffer, "ES")) {
+                ret.es = (int) strtol(ptr, &end, 10);
+            } else if (!strcmp(buffer, "A")) {
+                ret.a = (int) strtol(ptr, &end, 10);
+            } else if (!strcmp(buffer, "IB")) {
+                while(ptr != NULL) {
+                    int num = (int) strtol(ptr, &end, 10);
+                    if (strcmp(end, ptr))
+                        printf("%d\n", num);
+                    ptr = strtok(NULL, " \n\t\r");
+                    ret.ib_cnt++;
+                }
+            } else if (!strcmp(buffer, "VCS")) {
+                ret.vcs = (int) strtol(ptr, &end, 10);
+            } else if (!strcmp(buffer, "TU")) {
+                ret.tu = (int) strtol(ptr, &end, 10);
+            } else if (!strcmp(buffer, "MCTU")) {
+                ret.mctu = (int) strtol(ptr, &end, 10);
+            } else if (!strcmp(buffer, "ABG")) {
+                for (int i = 0; ptr != NULL; i++) {
+                    ret.abg[i] = (int) strtol(ptr, &end, 10);
+                    if (strcmp(end, ptr))
+                        printf("%d\n", ret.abg[i]);
+                    ptr = strtok(NULL, " \n\t\r");
+                }
+            } else {
+            }
+
+
+            // while(ptr != NULL)
+            // {
+            //     char *end;
+            //     int num = (int) strtol(ptr, &end, 10);
+            //     if (strcmp(end, ptr))
+            //         printf("%d\n", num);
+            //     ptr = strtok(NULL, " \n\t\r");
+            // }
         }
     }
-
-out:;
-    int total_miss_count = r_miss_count + w_miss_count;
-    int total_access_count = r_access_count + w_access_count;
-    printf("%d %lf%% %d %lf%% %d %lf%%\n",
-            total_miss_count,
-            (double) total_miss_count / total_access_count * 100,
-            r_miss_count,
-            (double) r_miss_count / r_access_count * 100,
-            w_miss_count,
-            (double) w_miss_count / w_access_count * 100
-        );
-    destroy_cache(&c);
-    return 0;
+    fclose(in);
+    return ret;
 }
 
 /*
