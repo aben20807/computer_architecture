@@ -85,19 +85,10 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    // srand(time(NULL));
-
-    // printf("%s\n", argv[1]);
-    // printf("%s\n", argv[2]);
-
     CacheConfig cc = read_cache_config(argv[1]);
     // print_cacheconfig(cc);
 
     /* Get the values of arguments */
-    // int nk = atoi(argv[1]);
-    // int assoc = atoi(argv[2]);
-    // int blocksize = atoi(argv[3]);
-    // char repl = argv[4][0];
     int nk = cc.mcs;
     int assoc = cc.a;
     int blocksize = cc.es;
@@ -158,43 +149,49 @@ CacheConfig read_cache_config(const char *filename)
     FILE *in = fopen(filename, "r");
     if (!in) {
         fprintf(stderr, "Fail to open Cache.txt at %s\n", filename);
-        return ret;
+        goto read_fail;
     }
+    FILE *out = fopen("victim_bit.txt", "w");
+    if (!out) {
+        fprintf(stderr, "Fail to open victim_bit.txt\n");
+        goto write_fail;
+    }
+    fprintf(out, "#Student ID: P74046284\n");
+
     char buffer[80];
+    /* Parse config file */
     while (!feof(in)) {
         if (fgets(buffer, 80, in) != NULL) {
             if (buffer[0] == '#') { // comment
                 continue;
             }
-            // printf("%s", buffer);
+            /* Split first first token */
             char *ptr = strtok(buffer, " \n\t\r");
-            // printf("\n'%s'\n", ptr);
             ptr = strtok(NULL, " \n\t\r");
 
-            char *end;
             if (!strcmp(buffer, "M")) {
-                ret.m = (int) strtol(ptr, &end, 10);
+                ret.m = (int) strtol(ptr, NULL, 10);
             } else if (!strcmp(buffer, "MCS")) {
-                ret.mcs = (int) strtol(ptr, &end, 10);
+                ret.mcs = (int) strtol(ptr, NULL, 10);
             } else if (!strcmp(buffer, "ES")) {
-                ret.es = (int) strtol(ptr, &end, 10);
+                ret.es = (int) strtol(ptr, NULL, 10);
             } else if (!strcmp(buffer, "A")) {
-                ret.a = (int) strtol(ptr, &end, 10);
+                ret.a = (int) strtol(ptr, NULL, 10);
             } else if (!strcmp(buffer, "IB")) {
                 for (int i = 0; ptr != NULL; i++) {
-                    ret.ib[i] = (int) strtol(ptr, &end, 10);
+                    ret.ib[i] = (int) strtol(ptr, NULL, 10);
                     ptr = strtok(NULL, " \n\t\r");
                     ret.ib_cnt++;
                 }
             } else if (!strcmp(buffer, "VCS")) {
-                ret.vcs = (int) strtol(ptr, &end, 10);
+                ret.vcs = (int) strtol(ptr, NULL, 10);
             } else if (!strcmp(buffer, "TU")) {
-                ret.tu = (int) strtol(ptr, &end, 10);
+                ret.tu = (int) strtol(ptr, NULL, 10);
             } else if (!strcmp(buffer, "MCTU")) {
-                ret.mctu = (int) strtol(ptr, &end, 10);
+                ret.mctu = (int) strtol(ptr, NULL, 10);
             } else if (!strcmp(buffer, "ABG")) {
                 for (int i = 0; ptr != NULL; i++) {
-                    ret.abg[i] = (int) strtol(ptr, &end, 10);
+                    ret.abg[i] = (int) strtol(ptr, NULL, 10);
                     ptr = strtok(NULL, " \n\t\r");
                 }
             } else {
@@ -202,7 +199,12 @@ CacheConfig read_cache_config(const char *filename)
             }
         }
     }
+    fclose(out);
+
+write_fail:
     fclose(in);
+
+read_fail:
     return ret;
 }
 
