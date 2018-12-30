@@ -380,11 +380,11 @@ void move_to_mru(Seq *seq, int target_index)
  * returns: the Addr struct contains tag and index
  */
 Addr *get_addr(u64 real_addr, int set_num, int block_size)
-{
+{ // TODO use CacheConfig index bit
     int index_mask = set_num - 1;
     Addr *ret = malloc(sizeof(Addr));
-    ret->index = (real_addr / block_size) & index_mask;
-    ret->tag = (real_addr / block_size) & (~index_mask);
+    ret->index = real_addr & index_mask;
+    ret->tag = real_addr & (~index_mask);
     return ret;
 }
 
