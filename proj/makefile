@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Werror -std=c99
+CFLAGS = -Wall -std=c99
 EXEC = cache
 OBJS = F74046284.o
 
@@ -17,4 +17,4 @@ clean:
 	rm -f $(EXEC) *.o
 
 test: $(EXEC)
-	./cache
+	./cache testcase/6_bits/cache.txt testcase/6_bits/ReferenceList.txt

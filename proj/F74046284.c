@@ -49,21 +49,22 @@ typedef struct _Cache {
 } Cache;
 
 typedef struct _CacheConfig {
-    int m;
-    int mcs;
-    int es;
-    int a;
-    int *ib;
-    int ib_cnt;
-    int vcs;
-    int tu;
-    int mctu;
-    int abg[3];
+    int m;          /* bits of addressing bus */
+    int mcs;        /* main cache size */
+    int es;         /* entry(block) size*/
+    int a;          /* n-way associative */
+    int ib[128];    /* index bit */
+    int ib_cnt;     /* count of index bit*/
+    int vcs;        /* victim-cache size */
+    int tu;         /* time unit */
+    int mctu;       /* maximum changes per time unit */
+    int abg[3];     /* alpha beta gamma */
 } CacheConfig;
 
 typedef int (*ReplFunc)(Set *set);
 
 CacheConfig read_cache_config(const char *filename);
+void print_cacheconfig(CacheConfig cc);
 Cache *create_cache(int set_num, int block_num_per_set);
 void destroy_cache(Cache **cache);
 Seq *create_seq_node(int block_index);
@@ -79,7 +80,8 @@ void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl);
 int main(int argc, char *argv[])
 {
     if (argc != 3) {
-        fprintf(stderr, "Need 2 arguments but get %d\n", argc - 1);
+        fprintf(stderr, "Need 2 arguments but get %d.\nFormat:\n", argc - 1);
+        fprintf(stderr, "./cache <Cache.txt> <ReferenceList.txt>\n");
         exit(1);
     }
 
@@ -89,6 +91,7 @@ int main(int argc, char *argv[])
     printf("%s\n", argv[2]);
 
     CacheConfig cc = read_cache_config(argv[1]);
+    print_cacheconfig(cc);
 
     /* Get the values of arguments */
     // int nk = atoi(argv[1]);
@@ -164,7 +167,8 @@ CacheConfig read_cache_config(const char *filename)
             }
             // printf("%s", buffer);
             char *ptr = strtok(buffer, " \n\t\r");
-            printf("\n'%s'\n", ptr);
+            // printf("\n'%s'\n", ptr);
+            ptr = strtok(NULL, " \n\t\r");
 
             char *end;
             if (!strcmp(buffer, "M")) {
@@ -176,10 +180,8 @@ CacheConfig read_cache_config(const char *filename)
             } else if (!strcmp(buffer, "A")) {
                 ret.a = (int) strtol(ptr, &end, 10);
             } else if (!strcmp(buffer, "IB")) {
-                while(ptr != NULL) {
-                    int num = (int) strtol(ptr, &end, 10);
-                    if (strcmp(end, ptr))
-                        printf("%d\n", num);
+                for (int i = 0; ptr != NULL; i++) {
+                    ret.ib[i] = (int) strtol(ptr, &end, 10);
                     ptr = strtok(NULL, " \n\t\r");
                     ret.ib_cnt++;
                 }
@@ -192,26 +194,34 @@ CacheConfig read_cache_config(const char *filename)
             } else if (!strcmp(buffer, "ABG")) {
                 for (int i = 0; ptr != NULL; i++) {
                     ret.abg[i] = (int) strtol(ptr, &end, 10);
-                    if (strcmp(end, ptr))
-                        printf("%d\n", ret.abg[i]);
                     ptr = strtok(NULL, " \n\t\r");
                 }
             } else {
+                fprintf(stderr, "Unknown cache config field: %s\n", buffer);
             }
-
-
-            // while(ptr != NULL)
-            // {
-            //     char *end;
-            //     int num = (int) strtol(ptr, &end, 10);
-            //     if (strcmp(end, ptr))
-            //         printf("%d\n", num);
-            //     ptr = strtok(NULL, " \n\t\r");
-            // }
         }
     }
     fclose(in);
     return ret;
+}
+
+void print_cacheconfig(CacheConfig cc)
+{
+    printf("%s: %d\n", "M",      cc.m);          /* bits of addressing bus */
+    printf("%s: %d\n", "MCS",    cc.mcs);        /* main cache size */
+    printf("%s: %d\n", "ES",     cc.es);         /* entry(block) size*/
+    printf("%s: %d\n", "A",      cc.a);          /* n-way associative */
+    printf("%s:", "IB");                         /* index bit */
+    for (int i = 0; i < cc.ib_cnt; i++)
+        printf(" %d", cc.ib[i]);
+    printf("\n%s: %d\n", "IB_CNT", cc.ib_cnt);   /* count of index bit*/
+    printf("%s: %d\n", "VCS",    cc.vcs);        /* victim-cache size */
+    printf("%s: %d\n", "TU",     cc.tu);         /* time unit */
+    printf("%s: %d\n", "MCTU",   cc.mctu);       /* maximum changes per time unit */
+    printf("%s:", "ABG");                        /* alpha beta gamma */
+    for (int i = 0; i < 3; i++)
+        printf(" %d", cc.abg[i]);
+    printf("\n");
 }
 
 /*
