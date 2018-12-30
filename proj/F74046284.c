@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <time.h>
 
-// #define DEBUG
+#define DEBUG
 #ifdef DEBUG
 #define debug(...) do { printf(__VA_ARGS__); } while(0)
 #else
@@ -102,18 +102,14 @@ int main(int argc, char *argv[])
     int assoc = cc.a;
     int blocksize = cc.es;
     char repl = 'l';
-
     ReplFunc repl_func = (repl == 'l') ? repl_lru : repl_random;
     int set_num = nk / assoc / blocksize;
     debug("%d %d %d %d %c\n", nk, assoc, blocksize, set_num, repl);
 
-    int r_miss_count = 0;
-    int r_access_count = 0;
-    int w_miss_count = 0;
-    int w_access_count = 0;
+    int m_miss_count = 0;   /* total Main-Cache miss */
+    int m_access_count = 0;
     Cache *c = create_cache(set_num, assoc);
 
-    char mode;
     u64 real_addr;
     char buffer[40];
 
@@ -121,12 +117,17 @@ int main(int argc, char *argv[])
     FILE *fin = fopen(argv[2], "r");
     while (!feof(fin)) {
         if (fgets(buffer, 40, fin) != NULL) {
-            mode = buffer[0];
-            r_access_count += (mode == 'r') ? 1 : 0;
-            w_access_count += (mode == 'w') ? 1 : 0;
+            if (buffer[0] == '#') { // comment
+                continue;
+            }
 
-            real_addr = strtoull(buffer + 2, NULL, 16);
-            debug("%c %lld\n", mode, real_addr);
+            if (buffer[0] == '.') { // start and end
+                continue;
+            }
+
+            real_addr = strtoull(buffer, NULL, 2);
+            debug("%lld\n", real_addr);
+            m_access_count++;
 
             Addr *addr = get_addr(real_addr, set_num, blocksize);
             debug("set: %d, tag: %d\n", addr->index, addr->tag);
@@ -134,8 +135,7 @@ int main(int argc, char *argv[])
             bool is_hit = find_addr(c, addr, repl_func);
             debug("%s\n", is_hit ? "HIT" : "MISS");
             if (!is_hit) {
-                r_miss_count += (mode == 'r') ? 1 : 0;
-                w_miss_count += (mode == 'w') ? 1 : 0;
+                m_miss_count++;
                 load_from_mem(c, addr, repl_func);
             }
         } else {
@@ -144,15 +144,9 @@ int main(int argc, char *argv[])
     }
 
     out:;
-    int total_miss_count = r_miss_count + w_miss_count;
-    int total_access_count = r_access_count + w_access_count;
-    printf("%d %lf%% %d %lf%% %d %lf%%\n",
-            total_miss_count,
-            (double) total_miss_count / total_access_count * 100,
-            r_miss_count,
-            (double) r_miss_count / r_access_count * 100,
-            w_miss_count,
-            (double) w_miss_count / w_access_count * 100
+    printf("%d %lf%%\n",
+            m_miss_count,
+            (double) m_miss_count / m_access_count * 100
         );
     destroy_cache(&c);
     return 0;
