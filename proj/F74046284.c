@@ -156,12 +156,15 @@ CacheConfig read_cache_config(const char *filename)
         fprintf(stderr, "Fail to open victim_bit.txt\n");
         goto write_fail;
     }
-    fprintf(out, "#Student ID: P74046284\n");
+    fprintf(out, "# Student ID: P74046284\n");
+    fprintf(out, "# Cache Organization\n");
 
-    char buffer[80];
     /* Parse config file */
+    char buffer[80];
     while (!feof(in)) {
         if (fgets(buffer, 80, in) != NULL) {
+            fprintf(out, "%s", buffer); // write victim_bit.txt
+
             if (buffer[0] == '#') { // comment
                 continue;
             }
