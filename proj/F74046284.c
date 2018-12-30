@@ -61,6 +61,12 @@ typedef struct _CacheConfig {
     int abg[3];     /* alpha beta gamma */
 } CacheConfig;
 
+typedef struct _VCache {
+    int block_num;
+    Seq *block_seq;
+    Block *blocks;
+} VCache;
+
 typedef int (*ReplFunc)(Set *set);
 
 CacheConfig read_cache_config(const char *filename);
@@ -70,6 +76,8 @@ void destroy_cache(Cache **cache);
 Seq *create_seq_node(int block_index);
 Seq *create_seq(int num);
 void destroy_seq(Seq **seq);
+VCache *create_v_cache(int block_num);
+void destroy_v_cache(VCache **cache);
 void move_to_mru(Seq *seq, int target_index);
 Addr *get_addr(u64 real_addr, int set_num, int block_size);
 bool find_addr(Cache *cache, Addr *addr, ReplFunc repl);
@@ -367,6 +375,32 @@ void move_to_mru(Seq *seq, int target_index)
         }
         itr = itr->nxt;
     }
+}
+
+/*
+ */
+VCache *create_v_cache(int block_num)
+{
+    VCache *ret = malloc(sizeof(VCache));
+    Block *tmp_blocks = malloc(sizeof(Block) * block_num);
+    for (int i = 0; i < block_num; i++) {
+        tmp_blocks[i].valid = false;
+        tmp_blocks[i].tag = 0;
+    }
+    ret->block_num = block_num;
+    ret->blocks = tmp_blocks;
+    ret->block_seq = create_seq(block_num);
+    return ret;
+}
+
+/*
+ */
+void destroy_v_cache(VCache **cache)
+{
+    destroy_seq(&((*cache)->block_seq));
+    free((*cache)->blocks);
+    free(*cache);
+    *cache = NULL;
 }
 
 /*
