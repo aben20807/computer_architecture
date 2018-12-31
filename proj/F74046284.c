@@ -18,14 +18,18 @@
 
 typedef unsigned long long u64;
 typedef struct _Addr {
-    int tag;
-    int index;
+    int addr;       /* store the origonal address (for victim cache) */
+    int tag;        /* store the tag of the address*/
+    int index;      /* stroe the set index of the address */
     // int offset;
 } Addr;
 
 typedef struct _Block {
     bool valid;
-    int tag;
+    union {
+        int tag;    /* for main cache entry*/
+        int addr;   /* for victim cache entry */
+    };
     // Data *data;
 } Block;
 
@@ -77,10 +81,11 @@ Seq *create_seq_node(int block_index);
 Seq *create_seq(int num);
 void destroy_seq(Seq **seq);
 VCache *create_v_cache(int block_num);
-void destroy_v_cache(VCache **cache);
+void destroy_v_cache(VCache **vcache);
 void move_to_mru(Seq *seq, int target_index);
 Addr *get_addr(u64 real_addr, int set_num, int block_size);
 bool find_addr(Cache *cache, Addr *addr, ReplFunc repl);
+bool find_addr_in_v(VCache *vcache, Addr *addr);
 int repl_lru(Set *set);
 int repl_random(Set *set);
 void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl);
@@ -106,8 +111,12 @@ int main(int argc, char *argv[])
     debug("%d %d %d %d %c\n", nk, assoc, blocksize, set_num, repl);
 
     int m_miss_count = 0;   /* total Main-Cache miss */
+    int v_miss_count = 0;   /* total Victim-Cache miss */
     int m_access_count = 0;
     Cache *c = create_cache(set_num, assoc);
+
+    /* Create victim cache with the number of blocks */
+    VCache *vc = create_v_cache(cc.vcs / cc.es);
 
     u64 real_addr;
     char buffer[40];
@@ -132,10 +141,15 @@ int main(int argc, char *argv[])
             debug("set: %d, tag: %d\n", addr->index, addr->tag);
 
             bool is_hit = find_addr(c, addr, repl_func);
-            debug("%s\n", is_hit ? "HIT" : "MISS");
+            debug("m: %s\n", is_hit ? "HIT" : "MISS");
             if (!is_hit) {
                 m_miss_count++;
-                load_from_mem(c, addr, repl_func);
+                bool is_hit_in_v = find_addr_in_v(vc, addr);
+                debug("v: %s\n", is_hit_in_v ? "HIT" : "MISS");
+                if (!is_hit_in_v) {
+                    v_miss_count++;
+                    load_from_mem(c, addr, repl_func);
+                }
             }
         } else {
             goto out;
@@ -147,6 +161,7 @@ int main(int argc, char *argv[])
             m_miss_count,
             (double) m_miss_count / m_access_count * 100
         );
+    destroy_v_cache(&vc);
     destroy_cache(&c);
     return 0;
 }
@@ -395,12 +410,12 @@ VCache *create_v_cache(int block_num)
 
 /*
  */
-void destroy_v_cache(VCache **cache)
+void destroy_v_cache(VCache **vcache)
 {
-    destroy_seq(&((*cache)->block_seq));
-    free((*cache)->blocks);
-    free(*cache);
-    *cache = NULL;
+    destroy_seq(&((*vcache)->block_seq));
+    free((*vcache)->blocks);
+    free(*vcache);
+    *vcache = NULL;
 }
 
 /*
@@ -417,6 +432,7 @@ Addr *get_addr(u64 real_addr, int set_num, int block_size)
 { // TODO use CacheConfig index bit
     int index_mask = set_num - 1;
     Addr *ret = malloc(sizeof(Addr));
+    ret->addr = real_addr;
     ret->index = real_addr & index_mask;
     ret->tag = real_addr & (~index_mask);
     return ret;
@@ -447,6 +463,20 @@ bool find_addr(Cache *cache, Addr *addr, ReplFunc repl)
             if (repl == repl_lru) {
                 move_to_mru(seq, i);
             }
+            return true;
+        }
+    }
+    return false;
+}
+
+bool find_addr_in_v(VCache *vcache, Addr *addr)
+{
+    int addr_addr = addr->addr;
+
+    int n = vcache->block_num;
+    for (int i = 0; i < n; i++) {
+        if (vcache->blocks[i].valid == true &&
+                vcache->blocks[i].addr == addr_addr) {
             return true;
         }
     }
