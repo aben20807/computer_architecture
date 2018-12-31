@@ -26,10 +26,8 @@ typedef struct _Addr {
 
 typedef struct _Block {
     bool valid;
-    union {
-        int tag;    /* for main cache entry*/
-        int addr;   /* for victim cache entry */
-    };
+    int tag;        /* for main cache entry*/
+    int addr;       /* for victim cache entry */
     // Data *data;
 } Block;
 
@@ -65,11 +63,7 @@ typedef struct _CacheConfig {
     int abg[3];     /* alpha beta gamma */
 } CacheConfig;
 
-typedef struct _VCache {
-    int block_num;
-    Seq *block_seq;
-    Block *blocks;
-} VCache;
+typedef struct _Set VCache;
 
 typedef int (*ReplFunc)(Set *set);
 
@@ -142,10 +136,12 @@ int main(int argc, char *argv[])
 
             bool is_hit = find_addr(c, addr, repl_func);
             debug("m: %s\n", is_hit ? "HIT" : "MISS");
+
             if (!is_hit) {
                 m_miss_count++;
                 bool is_hit_in_v = find_addr_in_v(vc, addr);
                 debug("v: %s\n", is_hit_in_v ? "HIT" : "MISS");
+
                 if (!is_hit_in_v) {
                     v_miss_count++;
                     load_from_mem(c, addr, repl_func);
@@ -272,6 +268,7 @@ Cache *create_cache(int set_num, int block_num_per_set)
         for (int j = 0; j < block_num_per_set; j++) {
             tmp_blocks[j].valid = false;
             tmp_blocks[j].tag = 0;
+            tmp_blocks[i].addr = 0;
         }
         tmp_sets[i].block_count = 0;
         tmp_sets[i].block_num = block_num_per_set;
@@ -401,7 +398,9 @@ VCache *create_v_cache(int block_num)
     for (int i = 0; i < block_num; i++) {
         tmp_blocks[i].valid = false;
         tmp_blocks[i].tag = 0;
+        tmp_blocks[i].addr = 0;
     }
+    ret->block_count = 0;
     ret->block_num = block_num;
     ret->blocks = tmp_blocks;
     ret->block_seq = create_seq(block_num);
@@ -525,15 +524,17 @@ void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl)
     int index = addr->index;
     Set *addr_set = &(cache->sets[index]);
     int addr_tag = addr->tag;
+    int addr_addr = addr->addr;
 
     int load_index = 0;
     if (addr_set->block_count < addr_set->block_num) {
         load_index = repl_lru(addr_set);
         addr_set->block_count++;
-    } else {
+    } else { /* find a index to replace with the new block */
         load_index = repl(addr_set);
     }
     addr_set->blocks[load_index].valid = true;
     addr_set->blocks[load_index].tag = addr_tag;
+    addr_set->blocks[load_index].addr = addr_addr;
     move_to_mru(addr_set->block_seq, load_index);
 }
