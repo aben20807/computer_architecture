@@ -79,6 +79,7 @@ Seq *create_seq(int num);
 void destroy_seq(Seq **seq);
 VCache *create_v_cache(int block_num);
 void destroy_v_cache(VCache **vcache);
+void print_v_cache(VCache *vcache);
 void move_block_to_v_cache(VCache *vcache, Block *block);
 void move_to_mru(Seq *seq, int target_index);
 Addr *get_addr(u64 real_addr, int set_num, int block_size);
@@ -153,6 +154,7 @@ int main(int argc, char *argv[])
                 }
             }
             print_cache(c);
+            print_v_cache(vc);
         } else {
             goto out;
         }
@@ -457,6 +459,26 @@ void destroy_v_cache(VCache **vcache)
     free((*vcache)->blocks);
     free(*vcache);
     *vcache = NULL;
+}
+
+/*
+ *
+ */
+void print_v_cache(VCache *vcache)
+{
+    printf("+- Victim cache -+\n");
+    Seq *itr = vcache->block_seq->nxt;
+    Seq *mru = vcache->block_seq->pre;
+    int b_cnt = 0;
+    while (itr != mru) {
+        int idx = itr->block_index;
+        int addr = vcache->blocks[idx].addr;
+        printf("|  b%d: ", b_cnt++);
+        print_bits(1, &addr);
+        printf("  |\n");
+        itr = itr->nxt;
+    }
+    printf("+----------------+\n");
 }
 
 /*
