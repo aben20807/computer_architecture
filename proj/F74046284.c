@@ -41,7 +41,7 @@ struct _Seq {   /* the sequence of blocks be used */
 typedef struct _Set {
     int block_count;
     int block_num;
-    bool victim;    /* for victim cache entry */
+    bool victim;    /* for deciding if move to victim cache */
     Seq *block_seq;
     Block *blocks;
 } Set;
@@ -49,6 +49,8 @@ typedef struct _Set {
 typedef struct _Cache {
     int set_num;
     Set *sets;
+    int *loc_freq;
+    int *glo_freq;
 } Cache;
 
 typedef struct _CacheConfig {
@@ -293,6 +295,8 @@ Cache *create_cache(int set_num, int block_num_per_set)
     }
     ret->sets = tmp_sets;
     ret->set_num = set_num;
+    ret->loc_freq = calloc(set_num, sizeof(int));
+    ret->glo_freq = calloc(set_num, sizeof(int));
     return ret;
 }
 
@@ -332,7 +336,9 @@ void print_cache(Cache *cache)
     int set_num = cache->set_num;
     for (int i = 0; i < set_num; i++) {
         Set set = cache->sets[i];
-        printf("+ set%02d ---------+\n", i);
+        printf("+ set%02d ---------+, g(%d), l(%d)\n", i,
+                cache->glo_freq[i],
+                cache->loc_freq[i]);
 
         Seq *itr = set.block_seq->nxt;
         Seq *mru = set.block_seq->pre;
@@ -620,6 +626,9 @@ void load_block_to_cache(Cache *cache, Addr *addr, ReplFunc repl, VCache *vcache
     int index = addr->index;
     Set *addr_set = &(cache->sets[index]);
     bool is_victim = addr_set->victim;
+
+    cache->loc_freq[index]++;
+    cache->glo_freq[index]++;
 
     int load_index = 0;
     if (addr_set->block_count < addr_set->block_num) {
