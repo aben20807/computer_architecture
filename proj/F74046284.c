@@ -20,7 +20,7 @@ typedef unsigned long long u64;
 typedef struct _Addr {
     int addr;       /* store the origonal address (for victim cache) */
     int tag;        /* store the tag of the address*/
-    int index;      /* stroe the set index of the address */
+    int idx;        /* stroe the set index of the address */
     // int offset;
 } Addr;
 
@@ -33,7 +33,7 @@ typedef struct _Block {
 
 typedef struct _Seq Seq;
 struct _Seq {   /* the sequence of blocks be used */
-    int block_index;
+    int block_idx;
     Seq *pre;
     Seq *nxt;
 };
@@ -77,14 +77,14 @@ void destroy_cache(Cache **cache);
 void update_victim_bit(Cache *cache, bool *v_bits);
 void print_cache(Cache *cache);
 void print_bits(size_t const size, void const *const ptr);
-Seq *create_seq_node(int block_index);
+Seq *create_seq_node(int block_idx);
 Seq *create_seq(int num);
 void destroy_seq(Seq **seq);
 VCache *create_v_cache(int block_num);
 void destroy_v_cache(VCache **vcache);
 void print_v_cache(VCache *vcache);
 void move_block_to_v_cache(VCache *vcache, Block *block);
-void move_to_mru(Seq *seq, int target_index);
+void move_to_mru(Seq *seq, int target_idx);
 Addr *get_addr(u64 real_addr, int set_num, int block_size);
 bool find_addr(Cache *cache, Addr *addr, ReplFunc repl);
 bool find_addr_in_v(VCache *vcache, Addr *addr);
@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
             m_access_count++;
 
             Addr *addr = get_addr(real_addr, set_num, blocksize);
-            debug("set: %d, tag: %d\n", addr->index, addr->tag);
+            debug("set: %d, tag: %d\n", addr->idx, addr->tag);
             // debug("addr: %d\n", addr->addr);
 
             bool is_hit = find_addr(c, addr, repl_func);
@@ -344,7 +344,7 @@ void print_cache(Cache *cache)
         Seq *mru = set.block_seq->pre;
         int b_cnt = 0;
         while (itr != mru) {
-            int idx = itr->block_index;
+            int idx = itr->block_idx;
             int addr = set.blocks[idx].addr;
             printf("|  b%d: ", b_cnt++);
             print_bits(1, &addr);
@@ -370,14 +370,14 @@ void print_bits(size_t const size, void const *const ptr)
  * -------------------------
  * Create and return a node of sequence with setting block index
  *
- * block_index: the index used to point to specific block quickly
+ * block_idx: the index used to point to specific block quickly
  *
  * returns: the seq node whit being initialized
  */
-Seq *create_seq_node(int block_index)
+Seq *create_seq_node(int block_idx)
 {
     Seq *ret = malloc(sizeof(Seq));
-    ret->block_index = block_index;
+    ret->block_idx = block_idx;
     ret->pre = NULL;
     ret->nxt = NULL;
     return ret;
@@ -419,7 +419,7 @@ Seq *create_seq(int num)
 void destroy_seq(Seq **seq)
 {
     Seq *itr = *seq;
-    while(itr->block_index != -2) {
+    while(itr->block_idx != -2) {
         Seq *nxt = itr->nxt;
         free(itr);
         itr = nxt;
@@ -434,15 +434,15 @@ void destroy_seq(Seq **seq)
  * Move the specific seq node to to the last (mru)
  *
  * seq: the sequence that need to do move operation
- * target_index: the index need to move to the last,
+ * target_idx: the index need to move to the last,
  *               if the index is illegal seq will not change
  */
-void move_to_mru(Seq *seq, int target_index)
+void move_to_mru(Seq *seq, int target_idx)
 {
     Seq *itr = seq->nxt;
     Seq *mru = seq->pre;
-    while (itr->block_index != -2) {
-        if (itr->block_index == target_index) {
+    while (itr->block_idx != -2) {
+        if (itr->block_idx == target_idx) {
             itr->nxt->pre = itr->pre;
             itr->pre->nxt = itr->nxt;
             mru->pre->nxt = itr;
@@ -493,7 +493,7 @@ void print_v_cache(VCache *vcache)
     Seq *mru = vcache->block_seq->pre;
     int b_cnt = 0;
     while (itr != mru) {
-        int idx = itr->block_index;
+        int idx = itr->block_idx;
             printf("|  b%d: ", b_cnt++);
         if (vcache->blocks[idx].valid) {
             int addr = vcache->blocks[idx].addr;
@@ -512,7 +512,7 @@ void print_v_cache(VCache *vcache)
  */
 void move_block_to_v_cache(VCache *vcache, Block *block)
 {
-    int place_idx = vcache->block_seq->nxt->block_index;
+    int place_idx = vcache->block_seq->nxt->block_idx;
     vcache->blocks[place_idx].valid = true;
     vcache->blocks[place_idx].tag = block->tag;
     vcache->blocks[place_idx].addr = block->addr;
@@ -531,11 +531,11 @@ void move_block_to_v_cache(VCache *vcache, Block *block)
  */
 Addr *get_addr(u64 real_addr, int set_num, int block_size)
 { // TODO use CacheConfig index bit
-    int index_mask = set_num - 1;
+    int idx_mask = set_num - 1;
     Addr *ret = malloc(sizeof(Addr));
     ret->addr = real_addr;
-    ret->index = real_addr & index_mask;
-    ret->tag = real_addr & (~index_mask);
+    ret->idx = real_addr & idx_mask;
+    ret->tag = real_addr & (~idx_mask);
     return ret;
 }
 
@@ -552,8 +552,8 @@ Addr *get_addr(u64 real_addr, int set_num, int block_size)
  */
 bool find_addr(Cache *cache, Addr *addr, ReplFunc repl)
 {
-    int index = addr->index;
-    Set *addr_set = &(cache->sets[index]);
+    int idx = addr->idx;
+    Set *addr_set = &(cache->sets[idx]);
     int addr_tag = addr->tag;
     Seq *seq = addr_set->block_seq;
 
@@ -595,7 +595,7 @@ bool find_addr_in_v(VCache *vcache, Addr *addr)
  */
 int repl_lru(Set *set)
 {
-    return set->block_seq->nxt->block_index;
+    return set->block_seq->nxt->block_idx;
 }
 
 /*
@@ -623,25 +623,25 @@ int repl_random(Set *set)
  */
 void load_block_to_cache(Cache *cache, Addr *addr, ReplFunc repl, VCache *vcache)
 {
-    int index = addr->index;
-    Set *addr_set = &(cache->sets[index]);
+    int idx = addr->idx;
+    Set *addr_set = &(cache->sets[idx]);
     bool is_victim = addr_set->victim;
 
-    cache->loc_freq[index]++;
-    cache->glo_freq[index]++;
+    cache->loc_freq[idx]++;
+    cache->glo_freq[idx]++;
 
-    int load_index = 0;
+    int load_idx = 0;
     if (addr_set->block_count < addr_set->block_num) {
-        load_index = repl_lru(addr_set);
+        load_idx = repl_lru(addr_set);
         addr_set->block_count++;
     } else { /* find a index to replace with the new block */
-        load_index = repl(addr_set);
+        load_idx = repl(addr_set);
         if (is_victim) {
-            move_block_to_v_cache(vcache, &(addr_set->blocks[load_index]));
+            move_block_to_v_cache(vcache, &(addr_set->blocks[load_idx]));
         }
     }
-    addr_set->blocks[load_index].valid = true;
-    addr_set->blocks[load_index].tag = addr->tag;
-    addr_set->blocks[load_index].addr = addr->addr;
-    move_to_mru(addr_set->block_seq, load_index);
+    addr_set->blocks[load_idx].valid = true;
+    addr_set->blocks[load_idx].tag = addr->tag;
+    addr_set->blocks[load_idx].addr = addr->addr;
+    move_to_mru(addr_set->block_seq, load_idx);
 }
