@@ -27,7 +27,6 @@ typedef struct _Addr {
 typedef struct _Block {
     bool valid;     /* for main cache entry*/
     int tag;        /* for main cache entry*/
-    bool victim;    /* for victim cache entry */
     int addr;       /* for victim cache entry */
     // Data *data;
 } Block;
@@ -42,6 +41,7 @@ struct _Seq {   /* the sequence of blocks be used */
 typedef struct _Set {
     int block_count;
     int block_num;
+    bool victim;    /* for victim cache entry */
     Seq *block_seq;
     Block *blocks;
 } Set;
@@ -79,13 +79,14 @@ Seq *create_seq(int num);
 void destroy_seq(Seq **seq);
 VCache *create_v_cache(int block_num);
 void destroy_v_cache(VCache **vcache);
+void move_block_to_v_cache(VCache *vcache, Block *block);
 void move_to_mru(Seq *seq, int target_index);
 Addr *get_addr(u64 real_addr, int set_num, int block_size);
 bool find_addr(Cache *cache, Addr *addr, ReplFunc repl);
 bool find_addr_in_v(VCache *vcache, Addr *addr);
 int repl_lru(Set *set);
 int repl_random(Set *set);
-void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl);
+void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl, VCache *vcache);
 
 int main(int argc, char *argv[])
 {
@@ -148,10 +149,10 @@ int main(int argc, char *argv[])
 
                 if (!is_hit_in_v) {
                     v_miss_count++;
-                    load_from_mem(c, addr, repl_func);
+                    load_from_mem(c, addr, repl_func, vc);
                 }
             }
-            print_cache(&c);
+            // print_cache(&c);
         } else {
             goto out;
         }
@@ -459,6 +460,18 @@ void destroy_v_cache(VCache **vcache)
 }
 
 /*
+ *
+ */
+void move_block_to_v_cache(VCache *vcache, Block *block)
+{
+    int place_idx = vcache->block_seq->nxt->block_index;
+    vcache->blocks[place_idx].valid = true;
+    vcache->blocks[place_idx].tag = block->tag;
+    vcache->blocks[place_idx].addr = block->addr;
+    move_to_mru(vcache->block_seq, place_idx);
+}
+
+/*
  * Function: get_addr
  * ------------------
  * Create and return the cache address by real address and the number of set
@@ -517,6 +530,7 @@ bool find_addr_in_v(VCache *vcache, Addr *addr)
     for (int i = 0; i < n; i++) {
         if (vcache->blocks[i].valid == true &&
                 vcache->blocks[i].addr == addr_addr) {
+            // TODO move to main cache
             return true;
         }
     }
@@ -560,10 +574,11 @@ int repl_random(Set *set)
  * addr: the address of block need to be loaded
  * repl: the replacement algorithm for getting the replace index
  */
-void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl)
+void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl, VCache *vcache)
 {
     int index = addr->index;
     Set *addr_set = &(cache->sets[index]);
+    bool is_victim = addr_set->victim;
 
     int load_index = 0;
     if (addr_set->block_count < addr_set->block_num) {
@@ -571,6 +586,8 @@ void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl)
         addr_set->block_count++;
     } else { /* find a index to replace with the new block */
         load_index = repl(addr_set);
+        // TODO if is victim then move to victim cache
+        move_block_to_v_cache(vcache, &(addr_set->blocks[load_index]));
     }
     addr_set->blocks[load_index].valid = true;
     addr_set->blocks[load_index].tag = addr->tag;
