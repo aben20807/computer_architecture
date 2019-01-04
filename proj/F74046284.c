@@ -472,9 +472,13 @@ void print_v_cache(VCache *vcache)
     int b_cnt = 0;
     while (itr != mru) {
         int idx = itr->block_index;
-        int addr = vcache->blocks[idx].addr;
-        printf("|  b%d: ", b_cnt++);
-        print_bits(1, &addr);
+            printf("|  b%d: ", b_cnt++);
+        if (vcache->blocks[idx].valid) {
+            int addr = vcache->blocks[idx].addr;
+            print_bits(1, &addr);
+        } else {
+            printf("X       ");
+        }
         printf("  |\n");
         itr = itr->nxt;
     }
