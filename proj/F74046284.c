@@ -72,7 +72,7 @@ CacheConfig read_cache_config(const char *filename);
 void print_cacheconfig(CacheConfig cc);
 Cache *create_cache(int set_num, int block_num_per_set);
 void destroy_cache(Cache **cache);
-void print_cache(Cache **cache);
+void print_cache(Cache *cache);
 void print_bits(size_t const size, void const *const ptr);
 Seq *create_seq_node(int block_index);
 Seq *create_seq(int num);
@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
                     load_from_mem(c, addr, repl_func, vc);
                 }
             }
-            // print_cache(&c);
+            print_cache(c);
         } else {
             goto out;
         }
@@ -308,12 +308,12 @@ void destroy_cache(Cache **cache)
 /*
  *
  */
-void print_cache(Cache **cache)
+void print_cache(Cache *cache)
 {
     printf("+-- Main cache --+\n");
-    int set_num = (*cache)->set_num;
+    int set_num = cache->set_num;
     for (int i = 0; i < set_num; i++) {
-        Set set = (*cache)->sets[i];
+        Set set = cache->sets[i];
         printf("+ set%02d ---------+\n", i);
 
         Seq *itr = set.block_seq->nxt;
