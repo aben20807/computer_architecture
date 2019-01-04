@@ -25,8 +25,9 @@ typedef struct _Addr {
 } Addr;
 
 typedef struct _Block {
-    bool valid;
+    bool valid;     /* for main cache entry*/
     int tag;        /* for main cache entry*/
+    bool victim;    /* for victim cache entry */
     int addr;       /* for victim cache entry */
     // Data *data;
 } Block;
@@ -71,6 +72,8 @@ CacheConfig read_cache_config(const char *filename);
 void print_cacheconfig(CacheConfig cc);
 Cache *create_cache(int set_num, int block_num_per_set);
 void destroy_cache(Cache **cache);
+void print_cache(Cache **cache);
+void print_bits(size_t const size, void const *const ptr);
 Seq *create_seq_node(int block_index);
 Seq *create_seq(int num);
 void destroy_seq(Seq **seq);
@@ -133,6 +136,7 @@ int main(int argc, char *argv[])
 
             Addr *addr = get_addr(real_addr, set_num, blocksize);
             debug("set: %d, tag: %d\n", addr->index, addr->tag);
+            // debug("addr: %d\n", addr->addr);
 
             bool is_hit = find_addr(c, addr, repl_func);
             debug("m: %s\n", is_hit ? "HIT" : "MISS");
@@ -147,6 +151,7 @@ int main(int argc, char *argv[])
                     load_from_mem(c, addr, repl_func);
                 }
             }
+            print_cache(&c);
         } else {
             goto out;
         }
@@ -297,6 +302,42 @@ void destroy_cache(Cache **cache)
     free((*cache)->sets);
     free(*cache);
     *cache = NULL;
+}
+
+/*
+ *
+ */
+void print_cache(Cache **cache)
+{
+    printf("+-- Main cache --+\n");
+    int set_num = (*cache)->set_num;
+    for (int i = 0; i < set_num; i++) {
+        Set set = (*cache)->sets[i];
+        printf("+ set%02d ---------+\n", i);
+
+        Seq *itr = set.block_seq->nxt;
+        Seq *mru = set.block_seq->pre;
+        int b_cnt = 0;
+        while (itr != mru) {
+            int idx = itr->block_index;
+            int addr = set.blocks[idx].addr;
+            printf("|  b%d: ", b_cnt++);
+            print_bits(1, &addr);
+            printf("  |\n");
+            itr = itr->nxt;
+        }
+    }
+    printf("+----------------+\n");
+}
+
+void print_bits(size_t const size, void const *const ptr)
+{
+    unsigned char *b = (unsigned char*) ptr;
+    for (int i = size - 1; i >= 0; i--){
+        for (int j = 7; j >= 0; j--){
+            printf("%u", (b[i] >> j) & 1);
+        }
+    }
 }
 
 /*
@@ -523,8 +564,6 @@ void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl)
 {
     int index = addr->index;
     Set *addr_set = &(cache->sets[index]);
-    int addr_tag = addr->tag;
-    int addr_addr = addr->addr;
 
     int load_index = 0;
     if (addr_set->block_count < addr_set->block_num) {
@@ -534,7 +573,7 @@ void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl)
         load_index = repl(addr_set);
     }
     addr_set->blocks[load_index].valid = true;
-    addr_set->blocks[load_index].tag = addr_tag;
-    addr_set->blocks[load_index].addr = addr_addr;
+    addr_set->blocks[load_index].tag = addr->tag;
+    addr_set->blocks[load_index].addr = addr->addr;
     move_to_mru(addr_set->block_seq, load_index);
 }
