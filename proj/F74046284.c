@@ -88,7 +88,7 @@ bool find_addr(Cache *cache, Addr *addr, ReplFunc repl);
 bool find_addr_in_v(VCache *vcache, Addr *addr);
 int repl_lru(Set *set);
 int repl_random(Set *set);
-void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl, VCache *vcache);
+void load_block_to_cache(Cache *cache, Addr *addr, ReplFunc repl, VCache *vcache);
 
 int main(int argc, char *argv[])
 {
@@ -151,8 +151,14 @@ int main(int argc, char *argv[])
 
                 if (!is_hit_in_v) {
                     v_miss_count++;
-                    load_from_mem(c, addr, repl_func, vc);
                 }
+                /*
+                 * Whether hit in the victim or not, main cache need to load
+                 * the block from the address. In addition, if load from
+                 * victim cache and the set is full, it is possible that need
+                 * to move the other block to the victim cache again.
+                 */
+                load_block_to_cache(c, addr, repl_func, vc);
             }
             print_cache(c);
             print_v_cache(vc);
@@ -566,7 +572,6 @@ bool find_addr_in_v(VCache *vcache, Addr *addr)
     for (int i = 0; i < n; i++) {
         if (vcache->blocks[i].valid == true &&
                 vcache->blocks[i].addr == addr_addr) {
-            // TODO move to main cache
             return true;
         }
     }
@@ -602,7 +607,7 @@ int repl_random(Set *set)
 }
 
 /*
- * Function: load_from_mem
+ * Function: load_block_to_cache
  * -----------------------
  * load block from memory to cache, if set is full then replace one block
  *
@@ -610,7 +615,7 @@ int repl_random(Set *set)
  * addr: the address of block need to be loaded
  * repl: the replacement algorithm for getting the replace index
  */
-void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl, VCache *vcache)
+void load_block_to_cache(Cache *cache, Addr *addr, ReplFunc repl, VCache *vcache)
 {
     int index = addr->index;
     Set *addr_set = &(cache->sets[index]);
