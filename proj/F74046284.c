@@ -72,6 +72,7 @@ CacheConfig read_cache_config(const char *filename);
 void print_cacheconfig(CacheConfig cc);
 Cache *create_cache(int set_num, int block_num_per_set);
 void destroy_cache(Cache **cache);
+void update_victim_bit(Cache *cache, bool *v_bits);
 void print_cache(Cache *cache);
 void print_bits(size_t const size, void const *const ptr);
 Seq *create_seq_node(int block_index);
@@ -282,6 +283,7 @@ Cache *create_cache(int set_num, int block_num_per_set)
         tmp_sets[i].block_num = block_num_per_set;
         tmp_sets[i].blocks = tmp_blocks;
         tmp_sets[i].block_seq = create_seq(block_num_per_set);
+        tmp_sets[i].victim = false;
     }
     ret->sets = tmp_sets;
     ret->set_num = set_num;
@@ -305,6 +307,14 @@ void destroy_cache(Cache **cache)
     free((*cache)->sets);
     free(*cache);
     *cache = NULL;
+}
+
+
+void update_victim_bit(Cache *cache, bool *v_bits)
+{
+    for (int i = 0; i < cache->set_num; i++) {
+        cache->sets[i].victim = v_bits[i];
+    }
 }
 
 /*
@@ -612,8 +622,9 @@ void load_from_mem(Cache *cache, Addr *addr, ReplFunc repl, VCache *vcache)
         addr_set->block_count++;
     } else { /* find a index to replace with the new block */
         load_index = repl(addr_set);
-        // TODO if is victim then move to victim cache
-        move_block_to_v_cache(vcache, &(addr_set->blocks[load_index]));
+        if (is_victim) {
+            move_block_to_v_cache(vcache, &(addr_set->blocks[load_index]));
+        }
     }
     addr_set->blocks[load_index].valid = true;
     addr_set->blocks[load_index].tag = addr->tag;
