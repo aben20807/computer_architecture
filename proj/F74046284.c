@@ -91,6 +91,7 @@ bool find_addr_in_v(VCache *vcache, Addr *addr);
 int repl_lru(Set *set);
 int repl_random(Set *set);
 void load_block_to_cache(Cache *cache, Addr *addr, ReplFunc repl, VCache *vcache);
+double get_ms();
 
 int main(int argc, char *argv[])
 {
@@ -112,9 +113,11 @@ int main(int argc, char *argv[])
     int set_num = nk / assoc / blocksize;
     debug("%d %d %d %d %c\n", nk, assoc, blocksize, set_num, repl);
 
-    int m_miss_count = 0;   /* total Main-Cache miss */
-    int v_miss_count = 0;   /* total Victim-Cache miss */
-    int m_access_count = 0;
+    int m_hit_cnt = 0;    /* total Main-Cache hit */
+    int v_hit_cnt = 0;    /* total Victim-Cache hit */
+    int m_miss_cnt = 0;   /* total Main-Cache miss */
+    int v_miss_cnt = 0;   /* total Victim-Cache miss */
+    // int m_access_cnt = 0;
     Cache *c = create_cache(set_num, assoc);
 
     /* Create victim cache with the number of blocks */
@@ -124,7 +127,9 @@ int main(int argc, char *argv[])
     char buffer[40];
 
     /* Open ReferenceList.txt and simulate */
+    int cycle_cnt = 0;
     FILE *fin = fopen(argv[2], "r");
+    double t_start = get_ms();
     while (!feof(fin)) {
         if (fgets(buffer, 40, fin) != NULL) {
             if (buffer[0] == '#') { // comment
@@ -135,9 +140,10 @@ int main(int argc, char *argv[])
                 continue;
             }
 
+            cycle_cnt++;
             real_addr = strtoull(buffer, NULL, 2);
             debug("%lld\n", real_addr);
-            m_access_count++;
+            // m_access_cnt++;
 
             Addr *addr = get_addr(real_addr, set_num, blocksize);
             debug("set: %d, tag: %d\n", addr->idx, addr->tag);
@@ -147,12 +153,14 @@ int main(int argc, char *argv[])
             debug("m: %s\n", is_hit ? "HIT" : "MISS");
 
             if (!is_hit) {
-                m_miss_count++;
+                m_miss_cnt++;
                 bool is_hit_in_v = find_addr_in_v(vc, addr);
                 debug("v: %s\n", is_hit_in_v ? "HIT" : "MISS");
 
                 if (!is_hit_in_v) {
-                    v_miss_count++;
+                    v_miss_cnt++;
+                } else {
+                    v_hit_cnt++;
                 }
                 /*
                  * Whether hit in the victim or not, main cache need to load
@@ -161,6 +169,8 @@ int main(int argc, char *argv[])
                  * to move the other block to the victim cache again.
                  */
                 load_block_to_cache(c, addr, repl_func, vc);
+            } else {
+                m_hit_cnt++;
             }
             print_cache(c);
             print_v_cache(vc);
@@ -170,10 +180,13 @@ int main(int argc, char *argv[])
     }
 
     out:;
-    printf("%d %lf%%\n",
-            m_miss_count,
-            (double) m_miss_count / m_access_count * 100
-        );
+    double t_end = get_ms();
+    printf("MCM %d\n", m_miss_cnt);
+    printf("VCM %d\n", v_miss_cnt);
+    printf("TCT %d\n", m_hit_cnt * cc.abg[0] +
+                        v_hit_cnt * cc.abg[1] +
+                        v_miss_cnt * cc.abg[2]);
+    printf("T %.0lf\n", t_end - t_start);
     destroy_v_cache(&vc);
     destroy_cache(&c);
     return 0;
@@ -291,7 +304,7 @@ Cache *create_cache(int set_num, int block_num_per_set)
         tmp_sets[i].block_num = block_num_per_set;
         tmp_sets[i].blocks = tmp_blocks;
         tmp_sets[i].block_seq = create_seq(block_num_per_set);
-        tmp_sets[i].victim = false;
+        tmp_sets[i].victim = true;
     }
     ret->sets = tmp_sets;
     ret->set_num = set_num;
@@ -644,4 +657,15 @@ void load_block_to_cache(Cache *cache, Addr *addr, ReplFunc repl, VCache *vcache
     addr_set->blocks[load_idx].tag = addr->tag;
     addr_set->blocks[load_idx].addr = addr->addr;
     move_to_mru(addr_set->block_seq, load_idx);
+}
+
+double get_ms()
+{
+    struct timespec ts;
+    double sec;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    sec = ts.tv_nsec;
+    sec /= 1e9;
+    sec += ts.tv_sec;
+    return sec * 1000;
 }

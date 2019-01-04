@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -std=c99
+CFLAGS = -Wall
 EXEC = cache
 OBJS = F74046284.o
 
