@@ -14,7 +14,7 @@ $(EXEC): $(OBJS)
 	$(CC) $(CFLAGS) -c $<
 
 clean:
-	rm -f $(EXEC) *.o
+	rm -f $(EXEC) *.o sim.txt victim_bit.txt
 
 test: $(EXEC)
 	./cache testcase/6_bits/cache.txt testcase/6_bits/ReferenceList.txt
