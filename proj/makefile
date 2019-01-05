@@ -18,3 +18,6 @@ clean:
 
 test: $(EXEC)
 	./cache testcase/6_bits/cache.txt testcase/6_bits/ReferenceList.txt
+
+test2: $(EXEC)
+	./cache testcase/6_bits/cache2.txt testcase/6_bits/ReferenceList2.txt
