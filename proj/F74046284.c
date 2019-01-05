@@ -41,7 +41,7 @@ struct _Seq {   /* the sequence of blocks be used */
 typedef struct _Set {
     int block_count;
     int block_num;
-    bool victim;    /* for deciding if move to victim cache */
+    // bool victim;    /* for deciding if move to victim cache */
     Seq *block_seq;
     Block *blocks;
 } Set;
@@ -49,6 +49,7 @@ typedef struct _Set {
 typedef struct _Cache {
     int set_num;
     Set *sets;
+    bool *v_bits;    /* for deciding if move to victim cache */
     int *loc_freq;
     int *glo_freq;
 } Cache;
@@ -75,6 +76,8 @@ void print_cacheconfig(CacheConfig cc);
 Cache *create_cache(int set_num, int block_num_per_set);
 void destroy_cache(Cache **cache);
 void update_victim_bit(Cache *cache, bool *v_bits);
+void print_victim_bit(bool *v_bits, int size);
+bool *predictor(Cache *cache, int v_entry_num, int time_unit, int cycle_cnt);
 void print_cache(Cache *cache);
 void print_bits(size_t const size, void const *const ptr);
 Seq *create_seq_node(int block_idx);
@@ -140,7 +143,13 @@ int main(int argc, char *argv[])
                 continue;
             }
 
+            if (cycle_cnt % cc.tu == 0) {
+                bool *v_bits = predictor(c, vc->block_num, cc.tu, cycle_cnt);
+                update_victim_bit(c, v_bits);
+            }
             cycle_cnt++;
+            print_victim_bit(c->v_bits, c->set_num);
+
             real_addr = strtoull(buffer, NULL, 2);
             debug("%lld\n", real_addr);
             // m_access_cnt++;
@@ -174,6 +183,7 @@ int main(int argc, char *argv[])
             }
             print_cache(c);
             print_v_cache(vc);
+            printf("\n\n");
         } else {
             goto out;
         }
@@ -304,10 +314,11 @@ Cache *create_cache(int set_num, int block_num_per_set)
         tmp_sets[i].block_num = block_num_per_set;
         tmp_sets[i].blocks = tmp_blocks;
         tmp_sets[i].block_seq = create_seq(block_num_per_set);
-        tmp_sets[i].victim = true;
+        // tmp_sets[i].victim = true;
     }
     ret->sets = tmp_sets;
     ret->set_num = set_num;
+    ret->v_bits = calloc(set_num, sizeof(bool));
     ret->loc_freq = calloc(set_num, sizeof(int));
     ret->glo_freq = calloc(set_num, sizeof(int));
     return ret;
@@ -328,6 +339,8 @@ void destroy_cache(Cache **cache)
         free((*cache)->sets[i].blocks);
     }
     free((*cache)->sets);
+    free((*cache)->loc_freq);
+    free((*cache)->glo_freq);
     free(*cache);
     *cache = NULL;
 }
@@ -336,8 +349,80 @@ void destroy_cache(Cache **cache)
 void update_victim_bit(Cache *cache, bool *v_bits)
 {
     for (int i = 0; i < cache->set_num; i++) {
-        cache->sets[i].victim = v_bits[i];
+        // cache->sets[i].victim = v_bits[i];
+        cache->v_bits[i] = v_bits[i];
+
+        /* clear local frequency history */
+        cache->loc_freq[i] = 0;
     }
+}
+
+void print_victim_bit(bool *v_bits, int size)
+{ // TODO output stream
+    for (int i = 0; i < size; i++) {
+        if (v_bits[i]) {
+            printf("1");
+        } else {
+            printf("0");
+        }
+    }
+    printf("\n");
+}
+
+bool *predictor(Cache *cache, int v_entry_num, int time_unit, int cycle_cnt)
+{
+    int set_num = cache->set_num;
+    bool *v_bits = calloc(set_num, sizeof(bool));
+    int size_cnt = 0; // count the number of bits which are set
+    int size_threshold = v_entry_num * 3 / 2;
+    int loc_threshold = (time_unit / v_entry_num) / 2;
+    int glo_threshold = (cycle_cnt / v_entry_num) / 8;
+    loc_threshold = loc_threshold ? loc_threshold : 1;
+    glo_threshold = glo_threshold ? glo_threshold : 1;
+    debug("l_t: %d, g_t: %d\n", loc_threshold, glo_threshold);
+    /* clear victim bits */
+    for (int i = 0; i < set_num; i++) {
+        v_bits[i] = false;
+    }
+    for (int i = 0; i < set_num; i++) {
+        if (cache->loc_freq[i] >= loc_threshold) {
+            v_bits[i] = true;
+            size_cnt++;
+        }
+    }
+    if (size_cnt > size_threshold) {
+        goto enought;
+    }
+    for (int i = 0; i < set_num; i++) {
+        if (!v_bits[i] && cache->glo_freq[i] >= glo_threshold) {
+            v_bits[i] = true;
+            size_cnt++;
+        }
+    }
+    if (size_cnt > size_threshold) {
+        goto enought;
+    }
+    for (int i = 0; i < set_num; i++) {
+        if (!v_bits[i] && cache->glo_freq[i] > 0) {
+            v_bits[i] = true;
+            size_cnt++;
+        }
+    }
+    if (size_cnt > size_threshold) {
+        goto enought;
+    }
+    for (int i = 0; i < set_num; i++) {
+        if (!v_bits[i]) {
+            v_bits[i] = true;
+            size_cnt++;
+        }
+        if (size_cnt > size_threshold) {
+            goto enought;
+        }
+    }
+enought:;
+    debug("set: %d\n", size_cnt);
+    return v_bits;
 }
 
 /*
@@ -638,7 +723,8 @@ void load_block_to_cache(Cache *cache, Addr *addr, ReplFunc repl, VCache *vcache
 {
     int idx = addr->idx;
     Set *addr_set = &(cache->sets[idx]);
-    bool is_victim = addr_set->victim;
+    // bool is_victim = addr_set->victim;
+    bool is_victim = cache->v_bits[idx];
 
     cache->loc_freq[idx]++;
     cache->glo_freq[idx]++;
