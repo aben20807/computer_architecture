@@ -14,8 +14,6 @@
 #define debug(...)
 #endif
 
-// #define K 1024
-
 typedef unsigned long long u64;
 typedef struct _Addr {
     int addr;       /* store the origonal address (for victim cache) */
@@ -41,7 +39,6 @@ struct _Seq {   /* the sequence of blocks be used */
 typedef struct _Set {
     int block_count;
     int block_num;
-    // bool victim;    /* for deciding if move to victim cache */
     Seq *block_seq;
     Block *blocks;
 } Set;
@@ -92,7 +89,6 @@ Addr *get_addr(u64 real_addr, int set_num, int block_size);
 bool find_addr(Cache *cache, Addr *addr, ReplFunc repl);
 bool find_addr_in_v(VCache *vcache, Addr *addr);
 int repl_lru(Set *set);
-int repl_random(Set *set);
 void load_block_to_cache(Cache *cache, Addr *addr, ReplFunc repl, VCache *vcache);
 double get_ms();
 
@@ -111,16 +107,14 @@ int main(int argc, char *argv[])
     int nk = cc.mcs;
     int assoc = cc.a;
     int blocksize = cc.es;
-    char repl = 'l';
-    ReplFunc repl_func = (repl == 'l') ? repl_lru : repl_random;
+    ReplFunc repl_func = repl_lru;
     int set_num = nk / assoc / blocksize;
-    debug("%d %d %d %d %c\n", nk, assoc, blocksize, set_num, repl);
+    debug("%d %d %d %d\n", nk, assoc, blocksize, set_num);
 
     int m_hit_cnt = 0;    /* total Main-Cache hit */
     int v_hit_cnt = 0;    /* total Victim-Cache hit */
     int m_miss_cnt = 0;   /* total Main-Cache miss */
     int v_miss_cnt = 0;   /* total Victim-Cache miss */
-    // int m_access_cnt = 0;
     Cache *c = create_cache(set_num, assoc);
 
     /* Create victim cache with the number of blocks */
@@ -143,7 +137,7 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            if (cycle_cnt % cc.tu == 0) {
+            if (cycle_cnt % ((cc.tu + 1) / cc.mctu) == 0) {
                 bool *v_bits = predictor(c, vc->block_num, cc.tu, cycle_cnt);
                 update_victim_bit(c, v_bits);
             }
@@ -152,7 +146,6 @@ int main(int argc, char *argv[])
 
             real_addr = strtoull(buffer, NULL, 2);
             debug("%lld\n", real_addr);
-            // m_access_cnt++;
 
             Addr *addr = get_addr(real_addr, set_num, blocksize);
             debug("set: %d, tag: %d\n", addr->idx, addr->tag);
@@ -314,7 +307,6 @@ Cache *create_cache(int set_num, int block_num_per_set)
         tmp_sets[i].block_num = block_num_per_set;
         tmp_sets[i].blocks = tmp_blocks;
         tmp_sets[i].block_seq = create_seq(block_num_per_set);
-        // tmp_sets[i].victim = true;
     }
     ret->sets = tmp_sets;
     ret->set_num = set_num;
@@ -349,7 +341,6 @@ void destroy_cache(Cache **cache)
 void update_victim_bit(Cache *cache, bool *v_bits)
 {
     for (int i = 0; i < cache->set_num; i++) {
-        // cache->sets[i].victim = v_bits[i];
         cache->v_bits[i] = v_bits[i];
 
         /* clear local frequency history */
@@ -697,20 +688,6 @@ int repl_lru(Set *set)
 }
 
 /*
- * Function: repl_random
- * ------------------
- * return the random index amount the set size
- *
- * set: the set which contain the size infomation
- *
- * returns: the random index
- */
-int repl_random(Set *set)
-{
-    return rand() % (set->block_num);
-}
-
-/*
  * Function: load_block_to_cache
  * -----------------------
  * load block from memory to cache, if set is full then replace one block
@@ -723,7 +700,6 @@ void load_block_to_cache(Cache *cache, Addr *addr, ReplFunc repl, VCache *vcache
 {
     int idx = addr->idx;
     Set *addr_set = &(cache->sets[idx]);
-    // bool is_victim = addr_set->victim;
     bool is_victim = cache->v_bits[idx];
 
     cache->loc_freq[idx]++;
