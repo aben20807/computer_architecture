@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <time.h>
 
-#define DEBUG
+// #define DEBUG
 #ifdef DEBUG
 #define debug(...) do { printf(__VA_ARGS__); } while(0)
 #else
@@ -73,7 +73,7 @@ void print_cacheconfig(CacheConfig cc);
 Cache *create_cache(int set_num, int block_num_per_set);
 void destroy_cache(Cache **cache);
 void update_victim_bit(Cache *cache, bool *v_bits);
-void print_victim_bit(bool *v_bits, int size);
+void print_victim_bit(FILE *fvic, bool *v_bits, int size);
 bool *predictor(Cache *cache, int v_entry_num, int time_unit, int cycle_cnt);
 void print_cache(Cache *cache);
 void print_bits(size_t const size, void const *const ptr);
@@ -91,6 +91,7 @@ bool find_addr_in_v(VCache *vcache, Addr *addr);
 int repl_lru(Set *set);
 void load_block_to_cache(Cache *cache, Addr *addr, ReplFunc repl, VCache *vcache);
 double get_ms();
+bool starts_with(const char *str, const char *pre);
 
 int main(int argc, char *argv[])
 {
@@ -123,8 +124,14 @@ int main(int argc, char *argv[])
     u64 real_addr;
     char buffer[40];
 
-    /* Open ReferenceList.txt and simulate */
     int cycle_cnt = 0;
+    int vbit_change_cnt = 0;
+    FILE *fsim = fopen("sim.txt", "w");
+    fprintf(fsim, "# Student ID: F74046284\n");
+
+    FILE *fvic = fopen("victim_bit.txt", "a");
+
+    /* Open ReferenceList.txt and simulate */
     FILE *fin = fopen(argv[2], "r");
     double t_start = get_ms();
     while (!feof(fin)) {
@@ -133,23 +140,28 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            if (buffer[0] == '.') { // start and end
+            if (starts_with(buffer, ".benchmark")) { // start
+                continue;
+            }
+
+            if (starts_with(buffer, ".end")) { // end
                 continue;
             }
 
             if (cycle_cnt % ((cc.tu + 1) / cc.mctu) == 0) {
                 bool *v_bits = predictor(c, vc->block_num, cc.tu, cycle_cnt);
                 update_victim_bit(c, v_bits);
+                vbit_change_cnt++;
+                free(v_bits);
             }
             cycle_cnt++;
-            print_victim_bit(c->v_bits, c->set_num);
 
             real_addr = strtoull(buffer, NULL, 2);
             debug("%lld\n", real_addr);
 
             Addr *addr = get_addr(real_addr, set_num, blocksize);
             debug("set: %d, tag: %d\n", addr->idx, addr->tag);
-            // debug("addr: %d\n", addr->addr);
+            debug("addr: %d\n", addr->addr);
 
             bool is_hit = find_addr(c, addr, repl_func);
             debug("m: %s\n", is_hit ? "HIT" : "MISS");
@@ -174,24 +186,108 @@ int main(int argc, char *argv[])
             } else {
                 m_hit_cnt++;
             }
-            print_cache(c);
-            print_v_cache(vc);
-            printf("\n\n");
+            free(addr);
+            // print_cache(c);
+            // print_v_cache(vc);
+            // printf("\n\n");
         } else {
             goto out;
         }
     }
 
-    out:;
+out:;
     double t_end = get_ms();
-    printf("MCM %d\n", m_miss_cnt);
-    printf("VCM %d\n", v_miss_cnt);
-    printf("TCT %d\n", m_hit_cnt * cc.abg[0] +
+    fprintf(fsim, "# total Main-Cache miss\n");
+    fprintf(fsim, "MCM %d\n", m_miss_cnt);
+    fprintf(fsim, "# total Victim-Cache miss\n");
+    fprintf(fsim, "VCM %d\n", v_miss_cnt);
+    fprintf(fsim, "# Total Cycle Time\n");
+    fprintf(fsim, "TCT %d\n", m_hit_cnt * cc.abg[0] +
                         v_hit_cnt * cc.abg[1] +
                         v_miss_cnt * cc.abg[2]);
-    printf("T %.0lf\n", t_end - t_start);
+    fprintf(fsim, "# CPU Time(ms)\n");
+    fprintf(fsim, "T %.0lf\n", t_end - t_start);
+    fprintf(fvic, "# Configuration of Victim-Bits: total change count\n");
+    fprintf(fvic, "CVB %d\n", vbit_change_cnt);
+    fprintf(fvic, "# Cycle Time Configuration of Victim-Bits\n");
     destroy_v_cache(&vc);
     destroy_cache(&c);
+
+    /* Need to simulate twice because of the order of writing */
+    m_hit_cnt = 0;    /* total Main-Cache hit */
+    v_hit_cnt = 0;    /* total Victim-Cache hit */
+    m_miss_cnt = 0;   /* total Main-Cache miss */
+    v_miss_cnt = 0;   /* total Victim-Cache miss */
+    c = create_cache(set_num, assoc);
+
+    /* Create victim cache with the number of blocks */
+    vc = create_v_cache(cc.vcs / cc.es);
+
+    cycle_cnt = 0;
+
+    /* Open ReferenceList.txt and simulate */
+    fin = fopen(argv[2], "r");
+    while (!feof(fin)) {
+        if (fgets(buffer, 40, fin) != NULL) {
+            if (buffer[0] == '#') { // comment
+                continue;
+            }
+
+            if (starts_with(buffer, ".benchmark")) { // start
+                fprintf(fsim, "%s", buffer);
+                fprintf(fsim, "#input_address\tmain_cache status\tvictim_cache status\n");
+                continue;
+            }
+
+            if (starts_with(buffer, ".end")) { // end
+                fprintf(fsim, "%s", buffer);
+                continue;
+            }
+
+            if (cycle_cnt % ((cc.tu + 1) / cc.mctu) == 0) {
+                bool *v_bits = predictor(c, vc->block_num, cc.tu, cycle_cnt);
+                update_victim_bit(c, v_bits);
+                free(v_bits);
+                fprintf(fvic, "%d ", cycle_cnt + 1);
+                print_victim_bit(fvic, c->v_bits, c->set_num);
+            }
+            cycle_cnt++;
+
+            for (int i = 0; i < cc.m; i++) {
+                fprintf(fsim, "%c", buffer[i]);
+            }
+            real_addr = strtoull(buffer, NULL, 2);
+
+            Addr *addr = get_addr(real_addr, set_num, blocksize);
+
+            bool is_hit = find_addr(c, addr, repl_func);
+            fprintf(fsim, "\t%s", is_hit ? "h\tn\n" : "m");
+
+            if (!is_hit) {
+                m_miss_cnt++;
+                bool is_hit_in_v = find_addr_in_v(vc, addr);
+                fprintf(fsim, "\t%s\n", is_hit_in_v ? "h" : "m");
+
+                if (!is_hit_in_v) {
+                    v_miss_cnt++;
+                } else {
+                    v_hit_cnt++;
+                }
+                load_block_to_cache(c, addr, repl_func, vc);
+            } else {
+                m_hit_cnt++;
+            }
+            free(addr);
+        } else {
+            goto finish;
+        }
+    }
+
+finish:;
+    destroy_v_cache(&vc);
+    destroy_cache(&c);
+    fclose(fvic);
+    fclose(fsim);
     return 0;
 }
 
@@ -301,7 +397,7 @@ Cache *create_cache(int set_num, int block_num_per_set)
         for (int j = 0; j < block_num_per_set; j++) {
             tmp_blocks[j].valid = false;
             tmp_blocks[j].tag = 0;
-            tmp_blocks[i].addr = 0;
+            tmp_blocks[j].addr = 0;
         }
         tmp_sets[i].block_count = 0;
         tmp_sets[i].block_num = block_num_per_set;
@@ -331,6 +427,7 @@ void destroy_cache(Cache **cache)
         free((*cache)->sets[i].blocks);
     }
     free((*cache)->sets);
+    free((*cache)->v_bits);
     free((*cache)->loc_freq);
     free((*cache)->glo_freq);
     free(*cache);
@@ -348,16 +445,16 @@ void update_victim_bit(Cache *cache, bool *v_bits)
     }
 }
 
-void print_victim_bit(bool *v_bits, int size)
-{ // TODO output stream
+void print_victim_bit(FILE *fvic, bool *v_bits, int size)
+{
     for (int i = 0; i < size; i++) {
         if (v_bits[i]) {
-            printf("1");
+            fprintf(fvic, "1");
         } else {
-            printf("0");
+            fprintf(fvic, "0");
         }
     }
-    printf("\n");
+    fprintf(fvic, "\n");
 }
 
 bool *predictor(Cache *cache, int v_entry_num, int time_unit, int cycle_cnt)
@@ -730,4 +827,11 @@ double get_ms()
     sec /= 1e9;
     sec += ts.tv_sec;
     return sec * 1000;
+}
+
+bool starts_with(const char *str, const char *pre)
+{
+    size_t lenpre = strlen(pre);
+    size_t lenstr = strlen(str);
+    return lenstr < lenpre ? false : strncmp(pre, str, lenpre) == 0;
 }
