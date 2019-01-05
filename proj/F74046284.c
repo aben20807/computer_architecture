@@ -291,6 +291,11 @@ finish:;
     return 0;
 }
 
+/*
+ * Function: read_cache_config
+ * ---------------------------
+ * for reading the cache config.
+ */
 CacheConfig read_cache_config(const char *filename)
 {
     CacheConfig ret = {};
@@ -304,7 +309,7 @@ CacheConfig read_cache_config(const char *filename)
         fprintf(stderr, "Fail to open victim_bit.txt\n");
         goto write_fail;
     }
-    fprintf(out, "# Student ID: P74046284\n");
+    fprintf(out, "# Student ID: F74046284\n");
     fprintf(out, "# Cache Organization\n");
 
     /* Parse config file */
@@ -457,6 +462,19 @@ void print_victim_bit(FILE *fvic, bool *v_bits, int size)
     fprintf(fvic, "\n");
 }
 
+/*
+ * Function: predictor
+ * -------------------
+ * The algorithm of predictor:
+ * Track local (in one time unit) and global frequency history.
+ * For each prediction of victim bits, set the threshold and test local
+ * first, if over the threshold then set the victim bit to true. Second,
+ * compare the global history and do same thing. In addition, set the
+ * size threshold that if the number of bits which are set is greater
+ * than size then return. After local and global setting, if there are
+ * other additional spaces then set those global history is greater than
+ * 0. Finally, setting the victim bits from small index to big.
+ */
 bool *predictor(Cache *cache, int v_entry_num, int time_unit, int cycle_cnt)
 {
     int set_num = cache->set_num;
@@ -513,9 +531,6 @@ enought:;
     return v_bits;
 }
 
-/*
- *
- */
 void print_cache(Cache *cache)
 {
     printf("+-- Main cache --+\n");
@@ -641,8 +656,6 @@ void move_to_mru(Seq *seq, int target_idx)
     }
 }
 
-/*
- */
 VCache *create_v_cache(int block_num)
 {
     VCache *ret = malloc(sizeof(VCache));
@@ -659,8 +672,6 @@ VCache *create_v_cache(int block_num)
     return ret;
 }
 
-/*
- */
 void destroy_v_cache(VCache **vcache)
 {
     destroy_seq(&((*vcache)->block_seq));
@@ -669,9 +680,6 @@ void destroy_v_cache(VCache **vcache)
     *vcache = NULL;
 }
 
-/*
- *
- */
 void print_v_cache(VCache *vcache)
 {
     printf("+- Victim cache -+\n");
@@ -693,9 +701,6 @@ void print_v_cache(VCache *vcache)
     printf("+----------------+\n");
 }
 
-/*
- *
- */
 void move_block_to_v_cache(VCache *vcache, Block *block)
 {
     int place_idx = vcache->block_seq->nxt->block_idx;
