@@ -454,7 +454,7 @@ void update_victim_bit(Cache *cache, bool *v_bits)
 
 void print_victim_bit(FILE *fvic, bool *v_bits, int size)
 {
-    for (int i = 0; i < size; i++) {
+    for (int i = size - 1; i >= 0; i--) {
         if (v_bits[i]) {
             fprintf(fvic, "1");
         } else {
