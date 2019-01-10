@@ -21,3 +21,6 @@ test: $(EXEC)
 
 test2: $(EXEC)
 	./cache testcase/6_bits/cache2.txt testcase/6_bits/ReferenceList2.txt
+
+test3: $(EXEC)
+	./cache testcase/6_bits/cache3.txt testcase/6_bits/ReferenceList3.txt
