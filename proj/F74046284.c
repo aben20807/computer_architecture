@@ -184,6 +184,8 @@ int main(int argc, char *argv[])
                  */
                 load_block_to_cache(c, addr, repl_func, vc);
             } else {
+                c->loc_freq[addr->idx]++;
+                c->glo_freq[addr->idx]++;
                 m_hit_cnt++;
             }
             free(addr);
